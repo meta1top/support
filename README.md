@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="https://nestjs.com/img/logo-small.svg" width="100" alt="Nest Logo" />
-  <img src="https://nextjs.org/static/favicon/favicon-32x32.png" width="100" alt="Next.js Logo" style="margin-left: 20px;" />
+  <img src="https://assets.vercel.com/image/upload/v1662130559/nextjs/Icon_light_background.png" width="100" alt="Next.js Logo" style="margin-left: 20px;" />
 </p>
 
 基于 NestJS、Next.js 和 React 构建的企业级全栈开发 Monorepo 项目，提供完整的后端服务、前端应用和 UI 组件库。
