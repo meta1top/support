@@ -13,8 +13,8 @@
 
 ### 后端应用 (NestJS)
 
-#### [server-demo](./apps/server-demo)
-演示后端服务，集成了 Nacos 配置管理、Redis 缓存、国际化等功能。
+#### [server-authub](./apps/server-authub)
+统一授权后端服务，集成了 Nacos 配置管理、Redis 缓存、国际化等功能。
 
 ### 前端应用 (Next.js)
 
@@ -81,6 +81,23 @@ Nacos 配置管理和服务发现的 NestJS 集成模块。
 - 🛡️ **类型安全** - 完整的 TypeScript 支持
 - 📝 **YAML 支持** - 解析和转换 YAML 配置
 
+#### [@meta-1/nest-message](./libs/message)
+邮件服务和验证码功能的 NestJS 模块。
+
+**特性：**
+- 📧 **邮件发送** - 支持 AWS SES 和阿里云邮件推送
+- 🔐 **验证码** - 邮箱验证码发送和管理
+- 🎨 **HTML 模板** - 精美的邮件模板
+- 🌍 **多区域支持** - 支持多个云服务区域
+
+#### [@meta-1/type](./libs/types)
+共享类型定义和 Zod Schema。
+
+**特性：**
+- 🛡️ **类型安全** - TypeScript 类型定义
+- ✅ **数据验证** - Zod Schema 验证
+- 🔄 **共享复用** - 前后端共享类型
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -104,7 +121,7 @@ pnpm install
 ```
 support/
 ├── apps/                        # 应用程序
-│   ├── server-demo/            # NestJS 后端服务
+│   ├── server-authub/          # NestJS 后端服务
 │   ├── web-authub/             # 用户授权平台
 │   ├── web-design/             # 设计系统展示
 │   └── web-editor/             # 编辑器展示
@@ -113,7 +130,9 @@ support/
 │   └── editor/                 # 富文本编辑器
 ├── libs/                        # NestJS 库
 │   ├── common/                 # 通用工具
-│   └── nacos/                  # Nacos 集成
+│   ├── message/                # 邮件服务
+│   ├── nacos/                  # Nacos 集成
+│   └── types/                  # 类型定义
 ├── locales/                     # 国际化语言文件
 │   ├── en.json
 │   └── zh-CN.json
@@ -131,13 +150,10 @@ support/
 
 ```bash
 # 开发模式运行后端服务
-pnpm run dev:server-demo
+pnpm run dev:server-authub
 
-# 构建后端服务
-pnpm run build:server-demo
-
-# 运行生产环境后端
-pnpm run start:server-demo
+# 构建后端服务（暂未配置）
+# pnpm run build:server-authub
 ```
 
 #### 前端开发
@@ -158,14 +174,20 @@ pnpm run build:web-authub
 # 构建库（编译 + 复制）
 pnpm run build:common          # 构建 common 库
 pnpm run build:nacos           # 构建 nacos 库
+pnpm run build:message         # 构建 message 库
+pnpm run build:types           # 构建 types 库
 
 # 仅编译
 pnpm run build:nest:common     # 仅编译 common 库
 pnpm run build:nest:nacos      # 仅编译 nacos 库
+pnpm run build:nest:message    # 仅编译 message 库
+pnpm run build:nest:types      # 仅编译 types 库
 
 # 复制构建文件
 pnpm run copy:common           # 复制到 libs/common/dist
 pnpm run copy:nacos            # 复制到 libs/nacos/dist
+pnpm run copy:message          # 复制到 libs/message/dist
+pnpm run copy:types            # 复制到 libs/types/dist
 ```
 
 #### 工具命令
@@ -191,6 +213,8 @@ pnpm run test:cov              # 运行测试并生成覆盖率报告
 详细使用文档请查看各个库的 README：
 - [@meta-1/nest-common](./libs/common/README.md) - 缓存、国际化、错误处理等
 - [@meta-1/nest-nacos](./libs/nacos/README.md) - Nacos 配置管理和服务发现
+- [@meta-1/nest-message](./libs/message/) - 邮件服务和验证码
+- [@meta-1/type](./libs/types/) - 类型定义和 Schema
 
 ### 前端组件库使用
 
@@ -239,10 +263,10 @@ export default function EditorPage() {
 
 ```bash
 # 构建库
-pnpm run build:common    # 或 build:nacos
+pnpm run build:common    # 或 build:nacos, build:message, build:types
 
 # 进入库目录
-cd libs/common           # 或 libs/nacos
+cd libs/common           # 或 libs/nacos, libs/message, libs/types
 
 # 发布到 npm
 npm publish
@@ -279,6 +303,22 @@ NACOS_GROUP=DEFAULT_GROUP
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
+
+# 邮件服务配置（可选）
+# AWS SES 配置
+MAIL_TYPE=aws-ses
+AWS_SES_ACCESS_KEY_ID=your-access-key
+AWS_SES_ACCESS_KEY_SECRET=your-secret-key
+AWS_SES_REGION=us-east-1
+AWS_SES_FROM_EMAIL=noreply@example.com
+
+# 或使用阿里云邮件推送
+# MAIL_TYPE=alc-dm
+# ALC_DM_ACCESS_KEY_ID=your-access-key
+# ALC_DM_ACCESS_KEY_SECRET=your-secret-key
+# ALC_DM_REGION=cn-hangzhou
+# ALC_DM_FROM_EMAIL=noreply@example.com
+# ALC_DM_FROM_ALIAS=Your App Name
 ```
 
 ## 🧪 测试
@@ -296,8 +336,13 @@ pnpm run test:cov
 
 ## 📖 文档
 
+### 后端库
 - [NestJS 通用库文档](./libs/common/README.md)
 - [Nacos 集成文档](./libs/nacos/README.md)
+- [邮件服务文档](./libs/message/)
+- [类型定义文档](./libs/types/)
+
+### 前端库
 - [设计系统文档](./packages/design/README.md)
 - [编辑器文档](./packages/editor/README.md)
 
