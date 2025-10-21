@@ -1,0 +1,105 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+  "root": true,
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**",
+      "!**/*.svg",
+      "!**/.vscode",
+      "!**/.next",
+      "!**/pnpm-lock.yaml",
+      "!**/node_modules",
+      "!**/src/components/ui",
+      "!**/src/lib"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noStaticOnlyClass": "off"
+      },
+      "nursery": {
+        "useSortedClasses": {
+          "level": "info",
+          "fix": "safe",
+          "options": {
+            "attributes": ["className", "class", "classList"],
+            "functions": ["cn", "clsx", "cva", "tw", "classnames"]
+          }
+        }
+      },
+      "correctness": {
+        "noUnknownFunction": "off"
+      },
+      "suspicious": {
+        "recommended": true
+      },
+      "style": {
+        "noNonNullAssertion": "off",
+        "useImportType": "off"
+      },
+      "a11y": {
+        "useFocusableInteractive": "off",
+        "useSemanticElements": "off",
+        "useAriaPropsForRole": "off",
+        "useKeyWithClickEvents": "off",
+        "noStaticElementInteractions": "off"
+      }
+    }
+  },
+  "css": {
+    "linter": {
+      "enabled": false
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    },
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              ":BUN:",
+              ":NODE:",
+              ["npm:*", "npm:*/**"],
+              ["react"],
+              ":PACKAGE_WITH_PROTOCOL:",
+              ":URL:",
+              [":PACKAGE:", "!@meta-1/**"],
+              ":BLANK_LINE:",
+              ["@meta-1/**"],
+              [":ALIAS:", "!**/*.css"],
+              ":PATH:",
+              ["**/*.css"]
+            ]
+          }
+        },
+        "useSortedAttributes": "on"
+      }
+    }
+  }
+}

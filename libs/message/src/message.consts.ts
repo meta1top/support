@@ -1,0 +1,1 @@
+export const MESSAGE_CONFIG = "MESSAGE_CONFIG";

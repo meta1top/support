@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@meta-1/nest-common": ["libs/common/src"],
+      "@meta-1/nest-common/*": ["libs/common/src/*"],
+      "@meta-1/nest-message": ["libs/message/src"],
+      "@meta-1/nest-message/*": ["libs/message/src/*"],
+      "@meta-1/nest-nacos": ["libs/nacos/src"],
+      "@meta-1/nest-nacos/*": ["libs/nacos/src/*"],
+      "@meta-1/types": ["libs/types/src"],
+      "@meta-1/types/*": ["libs/types/src/*"]
+    }
+  }
+}

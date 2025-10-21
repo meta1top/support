@@ -1,0 +1,40 @@
+{
+  "name": "@meta-1/nest-nacos",
+  "version": "0.0.1",
+  "description": "NestJS Nacos integration module for configuration management and service discovery",
+  "author": "",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "keywords": [
+    "nestjs",
+    "nacos",
+    "microservices",
+    "service-discovery",
+    "configuration"
+  ],
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0"
+  },
+  "dependencies": {
+    "nacos": "^2.6.0",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "typescript": "^5.7.3"
+  }
+}

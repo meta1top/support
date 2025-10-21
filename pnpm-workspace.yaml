@@ -1,0 +1,12 @@
+packages:
+  - packages/*
+  - apps/*
+  - libs/*
+
+onlyBuiltDependencies:
+  - '@alicloud/openapi-core'
+  - '@nestjs/core'
+  - '@scarf/scarf'
+  - esbuild
+  - sharp
+  - unrs-resolver

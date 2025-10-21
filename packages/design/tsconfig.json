@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.web.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": "./src",
+    "paths": {
+      "@meta-1/design/components/*": ["./src/components/*"],
+      "@meta-1/design/utils/*": ["./src/utils/*"],
+      "@meta-1/design/ui/*": ["./src/components/ui/*"],
+      "@meta-1/design/lib/*": ["./src/lib/*"],
+      "@meta-1/design/hooks/*": ["./src/hooks/*"]
+    },
+    "jsx": "preserve",
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,4 @@
+@import "@meta-1/design/theme.css";
+
+@source "../../../../node_modules/@meta-1/design/**/*.{ts,tsx,css}";
+@source "../../../../node_modules/@meta-1/editor/**/*.{ts,tsx,css}";

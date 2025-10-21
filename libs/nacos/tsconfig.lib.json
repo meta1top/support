@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "../../dist/libs/nacos",
+    "composite": true,
+    "rootDir": "./src",
+    "tsBuildInfoFile": "../../dist/libs/nacos/tsconfig.lib.tsbuildinfo"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
+  "references": [{ "path": "../common/tsconfig.lib.json" }]
+}
