@@ -1,10 +1,8 @@
 import { DynamicModule, Module } from "@nestjs/common";
 
-import { MailService } from "./mail.service";
-import { MailCodeController } from "./mail-code.controller";
-import { MailCodeService } from "./mail-code.service";
-import { MESSAGE_CONFIG } from "./message.consts";
-import { MessageConfig } from "./message.types";
+import { MailService } from "./mail";
+import { MailCodeController, MailCodeService } from "./mail-code";
+import { MESSAGE_CONFIG, MessageConfig } from "./shared";
 
 @Module({})
 export class MessageModule {

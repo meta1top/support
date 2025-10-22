@@ -3,10 +3,11 @@ import { InjectRedis } from "@nestjs-modules/ioredis";
 import Redis from "ioredis";
 
 import { AppError } from "@meta-1/nest-common";
-import { MailService } from "./mail.service";
+import { ErrorCode } from "../errors";
+import { MailService } from "../mail";
+import type { MessageConfig } from "../shared";
+import { MESSAGE_CONFIG } from "../shared";
 import { SendCodeDto } from "./mail-code.dto";
-import { MESSAGE_CONFIG } from "./message.consts";
-import type { MessageConfig } from "./message.types";
 
 @Injectable()
 export class MailCodeService {
@@ -24,7 +25,7 @@ export class MailCodeService {
 
     if (this.debug) {
       this.logger.warn(
-        `⚠️  验证码服务运行在 DEBUG 模式，验证码不会真实发送${this.fixedCode ? `，固定验证码: ${this.fixedCode}` : ""}`,
+        `⚠️  Verification code service running in DEBUG mode, codes will not be sent${this.fixedCode ? `, fixed code: ${this.fixedCode}` : ""}`,
       );
     }
   }
@@ -42,7 +43,7 @@ export class MailCodeService {
 
     // 2. DEBUG 模式：不存储，不发送
     if (this.debug) {
-      this.logger.debug(`[DEBUG] 验证码: ${code}，收件人: ${email}，操作: ${action}`);
+      this.logger.debug(`[DEBUG] Code: ${code}, Recipient: ${email}, Action: ${action}`);
       return;
     }
 
@@ -51,11 +52,11 @@ export class MailCodeService {
 
     try {
       await this.redis.setex(redisKey, 300, code); // 5分钟 = 300秒
-      this.logger.log(`验证码已存储到 Redis: ${redisKey}，过期时间: 5分钟`);
+      this.logger.log(`Verification code stored in Redis: ${redisKey}, expiry: 5 minutes`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "未知错误";
-      this.logger.error(`Redis 存储失败: ${errorMessage}`, error);
-      throw new AppError(500, "验证码存储失败");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Redis storage failed: ${errorMessage}`, error);
+      throw new AppError(ErrorCode.VERIFICATION_CODE_STORAGE_FAILED);
     }
 
     // 4. 发送邮件
@@ -65,11 +66,13 @@ export class MailCodeService {
       if (!emailResult.success) {
         // 发送失败，删除 Redis 中的验证码
         await this.redis.del(redisKey);
-        this.logger.error(`邮件发送失败，已删除 Redis 中的验证码: ${redisKey}`);
-        throw new AppError(500, emailResult.error || "邮件发送失败");
+        this.logger.error(`Email sending failed, deleted verification code from Redis: ${redisKey}`);
+        throw new AppError(ErrorCode.EMAIL_SENDING_FAILED, emailResult.error);
       }
 
-      this.logger.log(`验证码邮件发送成功，收件人: ${email}，MessageId: ${emailResult.messageId}`);
+      this.logger.log(
+        `Verification code email sent successfully, recipient: ${email}, MessageId: ${emailResult.messageId}`,
+      );
     } catch (error) {
       // 清理 Redis
       await this.redis.del(redisKey);
@@ -77,9 +80,9 @@ export class MailCodeService {
       if (error instanceof AppError) {
         throw error;
       }
-      const errorMessage = error instanceof Error ? error.message : "未知错误";
-      this.logger.error(`发送验证码失败: ${errorMessage}`, error);
-      throw new AppError(500, "发送验证码失败");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Failed to send verification code: ${errorMessage}`, error);
+      throw new AppError(ErrorCode.VERIFICATION_CODE_SEND_FAILED);
     }
   }
 
@@ -93,8 +96,8 @@ export class MailCodeService {
   async verify(to: string, action: string, code: string): Promise<boolean> {
     // DEBUG 模式：使用固定验证码验证
     if (this.debug) {
-      const isValid = code === this.generateCode();
-      this.logger.debug(`[DEBUG] 验证码验证: ${isValid ? "✅ 通过" : "❌ 失败"}，输入: ${code}`);
+      const isValid = `${code}` === this.generateCode();
+      this.logger.debug(`[DEBUG] Verification: ${isValid ? "✅ Passed" : "❌ Failed"}, input: ${code}`);
       return isValid;
     }
 
@@ -105,13 +108,13 @@ export class MailCodeService {
     try {
       storedCode = await this.redis.get(redisKey);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "未知错误";
-      this.logger.error(`Redis 读取失败: ${errorMessage}`, error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Redis read failed: ${errorMessage}`, error);
       return false;
     }
 
     if (!storedCode) {
-      this.logger.warn(`验证码不存在或已过期: ${redisKey}`);
+      this.logger.warn(`Verification code does not exist or has expired: ${redisKey}`);
       return false;
     }
 
@@ -121,13 +124,13 @@ export class MailCodeService {
       // 验证成功，删除验证码（一次性使用）
       try {
         await this.redis.del(redisKey);
-        this.logger.log(`验证码验证成功，已删除: ${redisKey}`);
+        this.logger.log(`Verification code verified successfully, deleted: ${redisKey}`);
       } catch (error) {
-        this.logger.error(`删除验证码失败: ${error}`, error);
+        this.logger.error(`Failed to delete verification code: ${error}`, error);
         // 删除失败不影响验证结果，只记录日志
       }
     } else {
-      this.logger.warn(`验证码错误: ${redisKey}，输入: ${code}，期望: ${storedCode}`);
+      this.logger.warn(`Verification code incorrect: ${redisKey}, input: ${code}, expected: ${storedCode}`);
     }
 
     return isValid;
@@ -140,11 +143,11 @@ export class MailCodeService {
   private generateCode(): string {
     // DEBUG 模式且配置了固定验证码，使用固定验证码
     if (this.debug && this.fixedCode) {
-      return this.fixedCode;
+      return `${this.fixedCode}`;
     }
 
     // 生成6位随机数字
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return `${Math.floor(100000 + Math.random() * 900000).toString()}`;
   }
 
   /**

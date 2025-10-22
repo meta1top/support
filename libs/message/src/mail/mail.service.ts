@@ -3,8 +3,7 @@ import * as $OpenApi from "@alicloud/openapi-client";
 import { SESv2Client, SendEmailCommand, type SendEmailCommandInput } from "@aws-sdk/client-sesv2";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import { MESSAGE_CONFIG } from "./message.consts";
-import type { MessageConfig } from "./message.types";
+import { MESSAGE_CONFIG, type MessageConfig } from "../shared";
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -55,7 +54,7 @@ export class MailService {
         region: mailConfig.ses.region,
       });
       this.fromEmail = mailConfig.ses.fromEmail;
-      this.logger.log(`MailService 初始化成功，使用 AWS SES，区域: ${mailConfig.ses.region}`);
+      this.logger.log(`MailService initialized successfully using AWS SES, region: ${mailConfig.ses.region}`);
     } else if (mailConfig.type === "alc-dm") {
       this.provider = "alc-dm";
       // 根据 region 构建正确的 endpoint
@@ -69,10 +68,10 @@ export class MailService {
       this.fromEmail = mailConfig.dm.fromEmail;
       this.fromAlias = mailConfig.dm.fromAlias;
       this.logger.log(
-        `MailService 初始化成功，使用阿里云邮件推送，区域: ${mailConfig.dm.region}，Endpoint: ${endpoint}`,
+        `MailService initialized successfully using Aliyun DirectMail, region: ${mailConfig.dm.region}, Endpoint: ${endpoint}`,
       );
     } else {
-      this.logger.warn("MailService 未配置或配置不完整");
+      this.logger.warn("MailService not configured or configuration incomplete");
     }
   }
 
@@ -87,14 +86,14 @@ export class MailService {
     error?: string;
   }> {
     if (!this.provider || !this.fromEmail) {
-      const error = "邮件服务未正确配置";
+      const error = "Mail service not configured correctly";
       this.logger.error(error);
       return { success: false, error };
     }
 
     // 验证至少有 html 或 text 内容
     if (!options.html && !options.text) {
-      const error = "邮件内容不能为空，至少需要提供 html 或 text";
+      const error = "Email content cannot be empty, at least html or text must be provided";
       this.logger.error(error);
       return { success: false, error };
     }
@@ -106,10 +105,10 @@ export class MailService {
       if (this.provider === "alc-dm") {
         return await this.sendEmailViaDM(options);
       }
-      return { success: false, error: "未知的邮件服务提供商" };
+      return { success: false, error: "Unknown mail service provider" };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "未知错误";
-      this.logger.error(`邮件发送失败: ${errorMessage}`, error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Email sending failed: ${errorMessage}`, error);
       return {
         success: false,
         error: errorMessage,
@@ -175,7 +174,7 @@ export class MailService {
     const result = await this.sesClient.send(command);
 
     this.logger.log(
-      `邮件发送成功 (AWS SES)，收件人: ${Array.isArray(to) ? to.join(", ") : to}，MessageId: ${result.MessageId}`,
+      `Email sent successfully (AWS SES), recipients: ${Array.isArray(to) ? to.join(", ") : to}, MessageId: ${result.MessageId}`,
     );
 
     return {
@@ -191,7 +190,7 @@ export class MailService {
     options: SendEmailOptions,
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.dmClient || !this.fromEmail) {
-      return { success: false, error: "阿里云邮件推送客户端未初始化" };
+      return { success: false, error: "Aliyun DirectMail client not initialized" };
     }
 
     const { to, subject, html, text, replyTo } = options;
@@ -215,7 +214,7 @@ export class MailService {
 
     const result = await this.dmClient.singleSendMail(request);
 
-    this.logger.log(`邮件发送成功 (阿里云 DM)，收件人: ${toAddresses}，EnvId: ${result.body?.envId}`);
+    this.logger.log(`Email sent successfully (Aliyun DM), recipients: ${toAddresses}, EnvId: ${result.body?.envId}`);
 
     return {
       success: true,
@@ -311,7 +310,7 @@ export class MailService {
 
     return this.sendEmail({
       to,
-      subject: "验证码 - 请验证您的身份",
+      subject: "Verification Code - Please Verify Your Identity",
       html,
       text,
     });

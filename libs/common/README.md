@@ -10,6 +10,7 @@ Common utilities and decorators for NestJS applications including caching, i18n,
 - 🚨 **Error Handling** - Global error filter with custom `AppError` class
 - ❄️ **Snowflake ID Generator** - Distributed unique ID generation decorator
 - 🔄 **Locale Sync** - Automatic locale file synchronization with hot-reload
+- 🔐 **JWT Token Service** - JWT token creation, validation, and parsing
 
 ## 📦 Installation
 
@@ -216,7 +217,7 @@ export class UserController {
 
 ### 4. Error Handling
 
-Global error filter with custom error class.
+Global error filter with custom error class and predefined error codes.
 
 #### Setup
 
@@ -233,7 +234,37 @@ async function bootstrap() {
 }
 ```
 
-#### Usage
+#### Usage with ErrorCode (Recommended)
+
+```typescript
+import { AppError, ErrorCode } from '@meta-1/nest-common';
+
+@Injectable()
+export class UserService {
+  async getUserById(id: string) {
+    const user = await this.userRepository.findOne(id);
+    
+    if (!user) {
+      // Use predefined error codes
+      throw new AppError(ErrorCode.USER_NOT_FOUND, { userId: id });
+    }
+    
+    return user;
+  }
+
+  async sendVerificationCode(email: string) {
+    try {
+      await this.mailService.send(email);
+    } catch (error) {
+      // Use module-specific error codes
+      // import { MessageErrorCode } from '@meta-1/nest-message';
+      throw new AppError(MessageErrorCode.EMAIL_SENDING_FAILED);
+    }
+  }
+}
+```
+
+#### Legacy Usage (Still Supported)
 
 ```typescript
 import { AppError } from '@meta-1/nest-common';
@@ -244,6 +275,7 @@ export class UserService {
     const user = await this.userRepository.findOne(id);
     
     if (!user) {
+      // Legacy: manually specify code and message
       throw new AppError(404, 'User not found', { userId: id });
     }
     
@@ -252,15 +284,78 @@ export class UserService {
 }
 ```
 
+#### Predefined Error Codes
+
+**Common Module Error Codes (0-999):**
+
+The `ErrorCode` object in `@meta-1/nest-common` provides type-safe, predefined error codes for common errors:
+
+```typescript
+import { ErrorCode } from '@meta-1/nest-common';
+
+// General errors (0-999)
+ErrorCode.SERVER_ERROR              // { code: 500, message: "Server Error" }
+ErrorCode.VALIDATION_FAILED         // { code: 400, message: "Validation Failed" }
+ErrorCode.UNAUTHORIZED              // { code: 401, message: "Unauthorized" }
+ErrorCode.FORBIDDEN                 // { code: 403, message: "Forbidden" }
+ErrorCode.NOT_FOUND                 // { code: 404, message: "Not Found" }
+```
+
+**Module-Specific Error Codes:**
+
+Each module should define its own error codes in its own namespace:
+
+```typescript
+// Message module error codes (1000-1999)
+import { MessageErrorCode } from '@meta-1/nest-message';
+
+MessageErrorCode.VERIFICATION_CODE_STORAGE_FAILED  // { code: 1000, message: "..." }
+MessageErrorCode.EMAIL_SENDING_FAILED              // { code: 1001, message: "..." }
+MessageErrorCode.VERIFICATION_CODE_SEND_FAILED     // { code: 1002, message: "..." }
+MessageErrorCode.MAIL_SERVICE_NOT_CONFIGURED       // { code: 1100, message: "..." }
+MessageErrorCode.MAIL_CONTENT_EMPTY                // { code: 1101, message: "..." }
+
+// User module error codes (2000-2999) - example
+UserErrorCode.USER_NOT_FOUND                       // { code: 2000, message: "..." }
+UserErrorCode.USER_ALREADY_EXISTS                  // { code: 2001, message: "..." }
+```
+
+**Error Code Range Convention:**
+- **0-999**: Common/general errors (`@meta-1/nest-common`)
+- **1000-1999**: Message module errors (`@meta-1/nest-message`)
+- **2000-2999**: User module errors
+- **3000-3999**: Auth module errors
+- **...etc**
+
+This modular approach keeps error codes organized by domain and prevents conflicts.
+
 **Error Response Format:**
 ```json
 {
-  "code": 404,
+  "code": 2000,
   "success": false,
   "message": "User not found",
   "data": { "userId": "123" },
   "timestamp": "2024-01-01T00:00:00.000Z",
   "path": "/api/users/123"
+}
+```
+
+**Zod Validation Error Response:**
+```json
+{
+  "code": 0,
+  "success": false,
+  "message": "Validation failed",
+  "data": [
+    {
+      "code": "invalid_format",
+      "path": ["email"],
+      "message": "Invalid email format"
+    }
+  ],
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "path": "/api/users"
 }
 ```
 
@@ -325,6 +420,164 @@ dist/i18n/
     └── common.json
 ```
 
+### 7. JWT Token Service
+
+JWT token creation, validation, and parsing service.
+
+#### Setup
+
+```typescript
+import { TokenService } from '@meta-1/nest-common';
+
+@Module({
+  providers: [
+    {
+      provide: TokenService,
+      useFactory: () => new TokenService({
+        secret: process.env.JWT_SECRET || 'your-secret-key',
+        defaultExpiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      }),
+    },
+  ],
+  exports: [TokenService],
+})
+export class AuthModule {}
+```
+
+#### Usage
+
+**Create Token:**
+
+```typescript
+import { TokenService } from '@meta-1/nest-common';
+
+@Injectable()
+export class AuthService {
+  constructor(private readonly tokenService: TokenService) {}
+
+  async login(user: User) {
+    const token = this.tokenService.create({
+      id: user.id,
+      username: user.username,
+      expiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days
+      // Custom data
+      role: user.role,
+      permissions: user.permissions,
+    });
+
+    return { token };
+  }
+}
+```
+
+**Validate Token:**
+
+```typescript
+@Injectable()
+export class AuthGuard implements CanActivate {
+  constructor(private readonly tokenService: TokenService) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const token = this.extractTokenFromHeader(request);
+
+    if (!token) {
+      return false;
+    }
+
+    return this.tokenService.check(token);
+  }
+
+  private extractTokenFromHeader(request: Request): string | undefined {
+    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    return type === 'Bearer' ? token : undefined;
+  }
+}
+```
+
+**Parse Token:**
+
+```typescript
+@Injectable()
+export class UserService {
+  constructor(private readonly tokenService: TokenService) {}
+
+  async getCurrentUser(token: string) {
+    try {
+      const payload = this.tokenService.parse(token);
+      
+      if (payload) {
+        console.log('User ID:', payload.jti);
+        console.log('Username:', payload.sub);
+        console.log('Issued at:', new Date(payload.iat * 1000));
+        console.log('Expires at:', new Date(payload.exp * 1000));
+        
+        // Access custom data
+        console.log('Role:', payload.role);
+        console.log('Permissions:', payload.permissions);
+        
+        return this.findUserById(payload.jti);
+      }
+    } catch (error) {
+      // Handle TOKEN_EXPIRED, TOKEN_INVALID, etc.
+      throw error;
+    }
+  }
+}
+```
+
+**Refresh Token:**
+
+```typescript
+@Post('refresh')
+async refreshToken(@Body('token') oldToken: string) {
+  try {
+    // Create a new token with the same data but extended expiration
+    const newToken = this.tokenService.refresh(
+      oldToken,
+      7 * 24 * 60 * 60 * 1000 // 7 days
+    );
+    
+    return { token: newToken };
+  } catch (error) {
+    throw new AppError(ErrorCode.TOKEN_INVALID);
+  }
+}
+```
+
+**Extract Information Without Validation:**
+
+```typescript
+// Quick extraction without signature verification
+// Useful for logging or non-security-critical operations
+const userId = this.tokenService.extractUserId(token);
+const username = this.tokenService.extractUsername(token);
+
+console.log(`Request from user: ${username} (${userId})`);
+```
+
+#### Token Payload Structure
+
+```typescript
+interface TokenPayload {
+  jti: string;       // JWT ID (user ID)
+  sub: string;       // Subject (username)
+  iat: number;       // Issued at (seconds)
+  exp: number;       // Expires at (seconds)
+  [key: string]: unknown; // Custom fields
+}
+```
+
+#### Error Codes
+
+| Error Code | Code | Message |
+|-----------|------|---------|
+| `TOKEN_SECRET_REQUIRED` | 200 | Token secret is required |
+| `TOKEN_CREATE_ERROR` | 201 | Token creation failed |
+| `TOKEN_EXPIRED` | 202 | Token has expired |
+| `TOKEN_INVALID` | 203 | Token is invalid |
+| `TOKEN_PARSE_ERROR` | 204 | Token parse error |
+
 ## 📝 API Reference
 
 ### Decorators
@@ -341,6 +594,7 @@ dist/i18n/
 - `I18nContext` - Enhanced i18n context with namespace support
 - `ErrorsFilter` - Global exception filter
 - `ResponseInterceptor` - Response formatting interceptor
+- `TokenService` - JWT token service for creation, validation, and parsing
 
 ### Functions
 

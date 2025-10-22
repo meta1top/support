@@ -8,7 +8,7 @@ import { MailCodeService } from "./mail-code.service";
  * 邮件服务控制器
  * 提供邮件验证码相关的 API 接口
  */
-@ApiTags("邮件服务")
+@ApiTags("MailCodeController")
 @Controller("/api/mail/code")
 export class MailCodeController {
   constructor(private readonly mailCodeService: MailCodeService) {}

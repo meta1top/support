@@ -37,7 +37,7 @@ function syncFile(sourceFilePath: string, targetBaseDir: string): void {
   const langCode = extractLanguageCode(filename);
 
   if (!langCode) {
-    console.warn(`[Locales Sync] 跳过非 JSON 文件: ${filename}`);
+    console.warn(`[Locales Sync] Skip non-JSON file: ${filename}`);
     return;
   }
 
@@ -60,7 +60,7 @@ function syncFile(sourceFilePath: string, targetBaseDir: string): void {
 
     console.log(`[Locales Sync] ✅ ${filename} -> i18n/${langCode}/common.json`);
   } catch (error) {
-    console.error(`[Locales Sync] ❌ 同步失败 ${filename}:`, error);
+    console.error(`[Locales Sync] ❌ Sync failed ${filename}:`, error);
   }
 }
 
@@ -78,17 +78,17 @@ function deleteFile(sourceFilePath: string, targetBaseDir: string): void {
 
     if (fs.existsSync(targetFilePath)) {
       fs.unlinkSync(targetFilePath);
-      console.log(`[Locales Sync] 🗑️  删除 i18n/${langCode}/common.json`);
+      console.log(`[Locales Sync] 🗑️  Deleted i18n/${langCode}/common.json`);
     }
 
     // 如果目录为空，删除目录
     const targetDir = path.join(targetBaseDir, langCode);
     if (fs.existsSync(targetDir) && fs.readdirSync(targetDir).length === 0) {
       fs.rmdirSync(targetDir);
-      console.log(`[Locales Sync] 🗑️  删除空目录 i18n/${langCode}/`);
+      console.log(`[Locales Sync] 🗑️  Deleted empty directory i18n/${langCode}/`);
     }
   } catch (error) {
-    console.error(`[Locales Sync] ❌ 删除失败 ${filename}:`, error);
+    console.error(`[Locales Sync] ❌ Delete failed ${filename}:`, error);
   }
 }
 
@@ -96,10 +96,10 @@ function deleteFile(sourceFilePath: string, targetBaseDir: string): void {
  * 初始化同步：同步所有现有文件
  */
 function initialSync(sourceDir: string, targetDir: string): void {
-  console.log("[Locales Sync] 🚀 开始同步...");
+  console.log("[Locales Sync] 🚀 Starting sync...");
 
   if (!fs.existsSync(sourceDir)) {
-    console.warn(`[Locales Sync] ⚠️  源目录不存在: ${sourceDir}`);
+    console.warn(`[Locales Sync] ⚠️  Source directory does not exist: ${sourceDir}`);
     return;
   }
 
@@ -112,7 +112,7 @@ function initialSync(sourceDir: string, targetDir: string): void {
   const files = fs.readdirSync(sourceDir).filter((file) => file.endsWith(".json"));
 
   if (files.length === 0) {
-    console.warn("[Locales Sync] ⚠️  未找到任何 JSON 文件");
+    console.warn("[Locales Sync] ⚠️  No JSON files found");
     return;
   }
 
@@ -122,7 +122,7 @@ function initialSync(sourceDir: string, targetDir: string): void {
     syncFile(filePath, targetDir);
   });
 
-  console.log(`[Locales Sync] ✅ 已同步 ${files.length} 个文件`);
+  console.log(`[Locales Sync] ✅ Synced ${files.length} file(s)`);
 }
 
 /**
@@ -130,12 +130,12 @@ function initialSync(sourceDir: string, targetDir: string): void {
  */
 function startWatching(sourceDir: string, targetDir: string): chokidar.FSWatcher | null {
   if (!fs.existsSync(sourceDir)) {
-    console.warn("[Locales Sync] ⚠️  无法启动监听：源目录不存在");
+    console.warn("[Locales Sync] ⚠️  Cannot start watching: source directory does not exist");
     return null;
   }
 
-  console.log("[Locales Sync] 👀 开始监听文件变化...");
-  console.log(`[Locales Sync] 📂 监听目录: ${sourceDir}`);
+  console.log("[Locales Sync] 👀 Starting to watch file changes...");
+  console.log(`[Locales Sync] 📂 Watching directory: ${sourceDir}`);
 
   const watcher = chokidar.watch(`${sourceDir}/*.json`, {
     persistent: true,
@@ -152,35 +152,35 @@ function startWatching(sourceDir: string, targetDir: string): chokidar.FSWatcher
 
   // 监听就绪
   watcher.on("ready", () => {
-    console.log("[Locales Sync] ✅ 监听器已就绪");
+    console.log("[Locales Sync] ✅ Watcher ready");
   });
 
   // 监听所有事件（调试用）
   watcher.on("all", (event, filePath) => {
-    console.log(`[Locales Sync] 🔔 事件: ${event} - ${path.basename(filePath)}`);
+    console.log(`[Locales Sync] 🔔 Event: ${event} - ${path.basename(filePath)}`);
   });
 
   // 监听文件添加
   watcher.on("add", (filePath) => {
-    console.log(`[Locales Sync] 📄 检测到新文件: ${path.basename(filePath)}`);
+    console.log(`[Locales Sync] 📄 New file detected: ${path.basename(filePath)}`);
     syncFile(filePath, targetDir);
   });
 
   // 监听文件修改
   watcher.on("change", (filePath) => {
-    console.log(`[Locales Sync] 📝 检测到文件变化: ${path.basename(filePath)}`);
+    console.log(`[Locales Sync] 📝 File change detected: ${path.basename(filePath)}`);
     syncFile(filePath, targetDir);
   });
 
   // 监听文件删除
   watcher.on("unlink", (filePath) => {
-    console.log(`[Locales Sync] 🗑️  检测到文件删除: ${path.basename(filePath)}`);
+    console.log(`[Locales Sync] 🗑️  File deletion detected: ${path.basename(filePath)}`);
     deleteFile(filePath, targetDir);
   });
 
   // 监听错误
   watcher.on("error", (error) => {
-    console.error("[Locales Sync] ❌ 监听错误:", error);
+    console.error("[Locales Sync] ❌ Watcher error:", error);
   });
 
   return watcher;

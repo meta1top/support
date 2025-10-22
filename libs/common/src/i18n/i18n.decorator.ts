@@ -1,6 +1,7 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 import { I18nContext as RawI18nContext } from "nestjs-i18n";
 
+import { AppError, ErrorCode } from "../errors";
 import { I18nContext } from "./i18n.wrapper";
 
 /**
@@ -19,7 +20,7 @@ import { I18nContext } from "./i18n.wrapper";
 export const I18n = createParamDecorator((namespace: string = "common", ctx: ExecutionContext): I18nContext => {
   const rawContext = RawI18nContext.current(ctx);
   if (!rawContext) {
-    throw new Error("I18nContext not found. Make sure I18nModule is properly configured.");
+    throw new AppError(ErrorCode.I18N_CONTEXT_NOT_FOUND);
   }
   return new I18nContext(rawContext, namespace);
 });

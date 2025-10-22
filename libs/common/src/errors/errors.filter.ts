@@ -1,10 +1,12 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from "@nestjs/common";
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from "@nestjs/common";
 import { Request, Response } from "express";
+import { ZodValidationException } from "nestjs-zod";
 
 import { AppError } from "./app.error";
 
 @Catch()
 export class ErrorsFilter implements ExceptionFilter {
+  private logger = new Logger(ErrorsFilter.name);
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -19,6 +21,11 @@ export class ErrorsFilter implements ExceptionFilter {
       code = exception.code;
       message = exception.message;
       data = exception.data;
+    } else if (exception instanceof ZodValidationException) {
+      // biome-ignore lint/suspicious/noExplicitAny: <getResponse>
+      const res = exception.getResponse() as any;
+      message = res.message || "Validation failed";
+      data = res.errors || null;
     } else if (exception instanceof HttpException) {
       const res = exception.getResponse();
       // biome-ignore lint/suspicious/noExplicitAny: res
@@ -27,13 +34,18 @@ export class ErrorsFilter implements ExceptionFilter {
       message = exception.message;
     }
 
-    response.status(200).json({
+    const error = {
       code,
       success: false,
       message,
       data,
       timestamp: new Date().toISOString(),
       path: request.url,
-    });
+    };
+
+    this.logger.log(typeof exception);
+    this.logger.error(error);
+
+    response.status(200).json(error);
   }
 }
