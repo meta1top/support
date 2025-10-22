@@ -1,34 +1,22 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRedis } from "@nestjs-modules/ioredis";
 import Redis from "ioredis";
 
 import { AppError } from "@meta-1/nest-common";
+import { MessageConfigService } from "../config/message.config.service";
 import { ErrorCode } from "../errors";
 import { MailService } from "../mail";
-import type { MessageConfig } from "../shared";
-import { MESSAGE_CONFIG } from "../shared";
 import { SendCodeDto } from "./mail-code.dto";
 
 @Injectable()
 export class MailCodeService {
   private readonly logger = new Logger(MailCodeService.name);
-  private readonly debug: boolean;
-  private readonly fixedCode?: string;
 
   constructor(
-    @Inject(MESSAGE_CONFIG) config: MessageConfig,
+    private readonly messageConfigService: MessageConfigService,
     @InjectRedis() private readonly redis: Redis,
     private readonly mailService: MailService,
-  ) {
-    this.debug = config.debug || false;
-    this.fixedCode = config.code;
-
-    if (this.debug) {
-      this.logger.warn(
-        `⚠️  Verification code service running in DEBUG mode, codes will not be sent${this.fixedCode ? `, fixed code: ${this.fixedCode}` : ""}`,
-      );
-    }
-  }
+  ) {}
 
   /**
    * 发送验证码
@@ -37,14 +25,30 @@ export class MailCodeService {
    */
   async send(options: SendCodeDto): Promise<void> {
     const { email, action } = options;
-
+    const config = this.messageConfigService.get();
     // 1. 生成或使用固定验证码
     const code = this.generateCode();
 
-    // 2. DEBUG 模式：不存储，不发送
-    if (this.debug) {
+    if (config?.debug) {
       this.logger.debug(`[DEBUG] Code: ${code}, Recipient: ${email}, Action: ${action}`);
       return;
+    }
+
+    // 2. 检查发送频率限制（1分钟内不可重复发送）
+    const rateLimitKey = this.buildRateLimitKey(email, action);
+    try {
+      const lastSendTime = await this.redis.get(rateLimitKey);
+      if (lastSendTime) {
+        this.logger.warn(`Verification code send too frequently: ${email}, action: ${action}`);
+        throw new AppError(ErrorCode.VERIFICATION_CODE_SEND_TOO_FREQUENTLY);
+      }
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Redis rate limit check failed: ${errorMessage}`, error);
+      // 频率检查失败不阻止发送，继续执行
     }
 
     // 3. 生产模式：存储到 Redis
@@ -53,6 +57,9 @@ export class MailCodeService {
     try {
       await this.redis.setex(redisKey, 300, code); // 5分钟 = 300秒
       this.logger.log(`Verification code stored in Redis: ${redisKey}, expiry: 5 minutes`);
+
+      // 设置频率限制标记（1分钟 = 60秒）
+      await this.redis.setex(rateLimitKey, 60, Date.now().toString());
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       this.logger.error(`Redis storage failed: ${errorMessage}`, error);
@@ -94,8 +101,8 @@ export class MailCodeService {
    * @returns 验证是否成功
    */
   async verify(to: string, action: string, code: string): Promise<boolean> {
-    // DEBUG 模式：使用固定验证码验证
-    if (this.debug) {
+    const config = this.messageConfigService.get();
+    if (config?.debug) {
       const isValid = `${code}` === this.generateCode();
       this.logger.debug(`[DEBUG] Verification: ${isValid ? "✅ Passed" : "❌ Failed"}, input: ${code}`);
       return isValid;
@@ -141,9 +148,9 @@ export class MailCodeService {
    * @returns 6位数字验证码
    */
   private generateCode(): string {
-    // DEBUG 模式且配置了固定验证码，使用固定验证码
-    if (this.debug && this.fixedCode) {
-      return `${this.fixedCode}`;
+    const config = this.messageConfigService.get();
+    if (config?.debug && config?.code) {
+      return `${config.code}`;
     }
 
     // 生成6位随机数字
@@ -158,5 +165,15 @@ export class MailCodeService {
    */
   private buildRedisKey(to: string, action: string): string {
     return `mail:code:${action}:${to}`;
+  }
+
+  /**
+   * 构建频率限制 Redis Key
+   * @param to 邮箱地址
+   * @param action 操作类型
+   * @returns Redis Key
+   */
+  private buildRateLimitKey(to: string, action: string): string {
+    return `mail:code:ratelimit:${action}:${to}`;
   }
 }

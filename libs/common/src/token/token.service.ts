@@ -1,62 +1,32 @@
 import { Injectable, Logger } from "@nestjs/common";
 import * as jwt from "jsonwebtoken";
 
+import { CommonConfigService } from "../config";
 import { AppError, ErrorCode } from "../errors";
-import type { CreateTokenData, TokenConfig, TokenPayload } from "./token.types";
+import type { CreateTokenData, TokenPayload } from "./token.types";
 
 /**
  * JWT Token 服务
  * 提供 Token 的创建、验证和解析功能
- *
- * @example
- * ```typescript
- * @Module({
- *   providers: [
- *     {
- *       provide: TokenService,
- *       useFactory: () => new TokenService({
- *         secret: 'your-secret-key',
- *         defaultExpiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days
- *       }),
- *     },
- *   ],
- * })
- * export class AppModule {}
  * ```
  */
 @Injectable()
 export class TokenService {
   private readonly logger = new Logger(TokenService.name);
-  private readonly config: Required<TokenConfig>;
 
-  constructor(config: TokenConfig) {
-    this.config = {
-      secret: config.secret,
-      defaultExpiresIn: config.defaultExpiresIn ?? 7 * 24 * 60 * 60 * 1000, // 默认 7 天
-    };
-
-    if (!this.config.secret) {
-      throw new AppError(ErrorCode.TOKEN_SECRET_REQUIRED);
-    }
-  }
+  constructor(private readonly commonConfigService: CommonConfigService) {}
 
   /**
    * 创建 JWT Token
    * @param data Token 数据
    * @returns JWT Token 字符串
-   *
-   * @example
-   * ```typescript
-   * const token = tokenService.create({
-   *   id: '123',
-   *   username: 'john',
-   *   expiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days
-   * });
-   * ```
    */
   create(data: CreateTokenData): string {
-    const now = Date.now();
-    const expiresIn = data.expiresIn || this.config.defaultExpiresIn;
+    const config = this.commonConfigService.get();
+    if (!config?.jwt.secret) {
+      throw new AppError(ErrorCode.TOKEN_SECRET_REQUIRED);
+    }
+    const expiresIn = (data.expiresIn || config?.jwt.expiresIn) ?? 7 * 24 * 60 * 60 * 1000;
 
     try {
       const payload: Record<string, unknown> = {
@@ -73,7 +43,7 @@ export class TokenService {
         }
       });
 
-      const token = jwt.sign(payload, this.config.secret, {
+      const token = jwt.sign(payload, config?.jwt.secret, {
         jwtid: String(data.id),
         subject: data.username,
         expiresIn: Math.floor(expiresIn / 1000), // 转换为秒
@@ -102,7 +72,11 @@ export class TokenService {
    */
   check(token: string): boolean {
     try {
-      jwt.verify(token, this.config.secret);
+      const config = this.commonConfigService.get();
+      if (!config?.jwt.secret) {
+        throw new AppError(ErrorCode.TOKEN_SECRET_REQUIRED);
+      }
+      jwt.verify(token, config.jwt.secret);
       return true;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
@@ -132,7 +106,11 @@ export class TokenService {
    */
   parse(token: string): TokenPayload | null {
     try {
-      const decoded = jwt.verify(token, this.config.secret);
+      const config = this.commonConfigService.get();
+      if (!config?.jwt.secret) {
+        throw new AppError(ErrorCode.TOKEN_SECRET_REQUIRED);
+      }
+      const decoded = jwt.verify(token, config.jwt.secret);
 
       if (typeof decoded === "string") {
         this.logger.warn("Unexpected token format: string payload");
@@ -201,6 +179,7 @@ export class TokenService {
    * @returns 新的 Token
    */
   refresh(token: string, expiresIn?: number): string {
+    const config = this.commonConfigService.get();
     const payload = this.parse(token);
     if (!payload) {
       throw new AppError(ErrorCode.TOKEN_INVALID);
@@ -219,7 +198,7 @@ export class TokenService {
     return this.create({
       id: payload.jti,
       username: payload.sub,
-      expiresIn: expiresIn || this.config.defaultExpiresIn,
+      expiresIn: (expiresIn || config?.jwt.expiresIn) ?? 7 * 24 * 60 * 60 * 1000,
       ...customData,
     });
   }

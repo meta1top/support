@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NacosConfigClient } from "nacos";
 import yaml from "yaml";
@@ -8,40 +8,26 @@ import type { NacosModuleOptions } from "./nacos.types";
 import { transformKeys } from "./nacos.utils";
 
 @Injectable()
-export class NacosConfigService implements OnModuleInit, OnModuleDestroy {
+export class NacosConfigService implements OnModuleDestroy {
   private client: NacosConfigClient;
   private readonly logger = new Logger(NacosConfigService.name);
 
   constructor(
     private readonly configService: ConfigService,
     @Inject(NACOS_MODULE_OPTIONS) private readonly options: NacosModuleOptions,
-  ) {}
+  ) {
+    this.initializeClient();
+  }
 
-  async onModuleInit() {
+  private initializeClient() {
     this.logger.log("Initializing Nacos config listener...");
-
     this.client = new NacosConfigClient({
       serverAddr: this.options.server,
       namespace: this.options.namespace || "public",
       username: this.options.username,
       password: this.options.password,
     });
-
-    // 注意：配置已在 main.ts 中预加载，这里只订阅配置变更
-    this.client.subscribe(
-      {
-        dataId: this.options.config.dataId,
-        group: this.options.config.group ?? "DEFAULT_GROUP",
-      },
-      // biome-ignore lint/suspicious/noExplicitAny: content
-      (content: any) => {
-        this.logger.log("Nacos config updated, refreshing...");
-        const json = this.parseYaml(content);
-        this.configService.set(NACOS_CONFIG, json);
-      },
-    );
-
-    this.logger.log("NacosConfigService initialized (listening for config changes)");
+    this.logger.log("NacosConfigService initialized");
   }
 
   onModuleDestroy() {
@@ -55,13 +41,16 @@ export class NacosConfigService implements OnModuleInit, OnModuleDestroy {
     this.logger.log("NacosConfigService destroyed");
   }
 
-  subscribe(listener: (content: string) => void) {
+  subscribe<T>(listener: (content: T) => void) {
     this.client.subscribe(
       {
         dataId: this.options.config.dataId,
         group: this.options.config.group ?? "DEFAULT_GROUP",
       },
-      listener,
+      (originalContent: string) => {
+        const content = this.parseYaml(originalContent);
+        listener(content as T);
+      },
     );
   }
 

@@ -1,9 +1,10 @@
 import Dm20151123, * as $Dm20151123 from "@alicloud/dm20151123";
 import * as $OpenApi from "@alicloud/openapi-client";
 import { SESv2Client, SendEmailCommand, type SendEmailCommandInput } from "@aws-sdk/client-sesv2";
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 
-import { MESSAGE_CONFIG, type MessageConfig } from "../shared";
+import { MessageConfigService } from "../config/message.config.service";
+import { type MessageConfig } from "../shared";
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -18,13 +19,24 @@ export interface SendEmailOptions {
 type MailProvider = "aws-ses" | "alc-dm";
 
 @Injectable()
-export class MailService {
+export class MailService implements OnModuleInit {
   private readonly logger = new Logger(MailService.name);
   private provider: MailProvider | null = null;
   private sesClient: SESv2Client | null = null;
   private dmClient: Dm20151123 | null = null;
   private fromEmail: string | null = null;
   private fromAlias?: string;
+
+  constructor(private readonly messageConfigService: MessageConfigService) {}
+
+  onModuleInit() {
+    const config = this.messageConfigService.get();
+    if (config) {
+      this.initializeClient(config);
+    } else {
+      this.logger.warn("MessageConfig not found, MailService not initialized");
+    }
+  }
 
   /**
    * 构建阿里云邮件推送的 endpoint
@@ -41,7 +53,11 @@ export class MailService {
     return `dm.${region}.aliyuncs.com`;
   }
 
-  constructor(@Inject(MESSAGE_CONFIG) config: MessageConfig) {
+  /**
+   * 初始化邮件客户端
+   * @param config 消息配置
+   */
+  private initializeClient(config: MessageConfig) {
     const mailConfig = config.mail;
 
     if (mailConfig.type === "aws-ses") {
@@ -73,6 +89,29 @@ export class MailService {
     } else {
       this.logger.warn("MailService not configured or configuration incomplete");
     }
+  }
+
+  /**
+   * 刷新配置并重新初始化客户端
+   * @param config 新的消息配置
+   */
+  async refresh(config: MessageConfig): Promise<void> {
+    this.logger.log("Refreshing MailService configuration...");
+
+    // 清理旧的客户端实例
+    if (this.sesClient) {
+      // AWS SES 客户端会自动处理清理
+      this.sesClient = null;
+    }
+    if (this.dmClient) {
+      // 阿里云 DM 客户端会自动处理清理
+      this.dmClient = null;
+    }
+
+    // 重新初始化
+    this.initializeClient(config);
+
+    this.logger.log("MailService configuration refreshed successfully");
   }
 
   /**

@@ -43,9 +43,6 @@ export class ErrorsFilter implements ExceptionFilter {
       path: request.url,
     };
 
-    this.logger.log(typeof exception);
-    this.logger.error(error);
-
     response.status(200).json(error);
   }
 }
