@@ -37,7 +37,7 @@ export function Cacheable(options: { key: string; ttl?: number }): MethodDecorat
       }
 
       const cacheKey = generateCacheKey(options.key, args);
-      const ttl = options.ttl || 60;
+      const ttl = options.ttl || 300;
 
       logger.debug(`Cache key: ${cacheKey}`);
 

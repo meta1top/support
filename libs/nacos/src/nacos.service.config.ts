@@ -27,6 +27,9 @@ export class NacosConfigService implements OnModuleDestroy {
       username: this.options.username,
       password: this.options.password,
     });
+    this.subscribe((content) => {
+      this.configService.set(NACOS_CONFIG, content);
+    });
     this.logger.log("NacosConfigService initialized");
   }
 

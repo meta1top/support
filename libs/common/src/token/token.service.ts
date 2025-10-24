@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import * as jwt from "jsonwebtoken";
+import ms from "ms";
 
 import { CommonConfigService } from "../config";
 import { AppError, ErrorCode } from "../errors";
@@ -26,28 +27,20 @@ export class TokenService {
     if (!config?.jwt.secret) {
       throw new AppError(ErrorCode.TOKEN_SECRET_REQUIRED);
     }
-    const expiresIn = (data.expiresIn || config?.jwt.expiresIn) ?? 7 * 24 * 60 * 60 * 1000;
+    const expiresIn = (data.expiresIn || config?.jwt.expiresIn) ?? "1d";
 
     try {
-      const payload: Record<string, unknown> = {
-        ...data,
-        id: undefined, // 移除 id，使用 jti
-        username: undefined, // 移除 username，使用 sub
-        expiresIn: undefined, // 移除 expiresIn
-      };
-
-      // 清理 undefined 字段
-      Object.keys(payload).forEach((key) => {
-        if (payload[key] === undefined) {
-          delete payload[key];
-        }
-      });
-
-      const token = jwt.sign(payload, config?.jwt.secret, {
-        jwtid: String(data.id),
-        subject: data.username,
-        expiresIn: Math.floor(expiresIn / 1000), // 转换为秒
-      });
+      const token = jwt.sign(
+        {
+          sub: data.username,
+          jti: data.id,
+        },
+        config?.jwt.secret,
+        {
+          algorithm: "HS256",
+          expiresIn,
+        },
+      );
 
       return token;
     } catch (error) {
@@ -93,18 +86,23 @@ export class TokenService {
   /**
    * 解析 Token 并返回 Payload
    * @param token JWT Token 字符串
-   * @returns Token Payload，解析失败返回 null
+   * @returns Token Payload
+   * @throws {AppError} TOKEN_EXPIRED - Token 已过期
+   * @throws {AppError} TOKEN_INVALID - Token 无效
+   * @throws {AppError} TOKEN_PARSE_ERROR - 解析错误
    *
    * @example
    * ```typescript
-   * const payload = tokenService.parse('eyJhbGc...');
-   * if (payload) {
+   * try {
+   *   const payload = tokenService.parse('eyJhbGc...');
    *   console.log('User ID:', payload.jti);
    *   console.log('Username:', payload.sub);
+   * } catch (error) {
+   *   console.error('Token parse failed:', error);
    * }
    * ```
    */
-  parse(token: string): TokenPayload | null {
+  parse(token: string): TokenPayload {
     try {
       const config = this.commonConfigService.get();
       if (!config?.jwt.secret) {
@@ -114,7 +112,7 @@ export class TokenService {
 
       if (typeof decoded === "string") {
         this.logger.warn("Unexpected token format: string payload");
-        return null;
+        throw new AppError(ErrorCode.TOKEN_INVALID);
       }
 
       return decoded as TokenPayload;
@@ -175,31 +173,16 @@ export class TokenService {
   /**
    * 刷新 Token（使用旧 Token 的数据创建新 Token）
    * @param token 旧 Token
-   * @param expiresIn 新的过期时间（毫秒），不传则使用默认值
+   * @param expiresIn 新的过期时间（字符串格式，如 "7d"），不传则使用默认值
    * @returns 新的 Token
    */
-  refresh(token: string, expiresIn?: number): string {
+  refresh(token: string, expiresIn?: ms.StringValue): string {
     const config = this.commonConfigService.get();
     const payload = this.parse(token);
-    if (!payload) {
-      throw new AppError(ErrorCode.TOKEN_INVALID);
-    }
-
-    // 提取自定义字段
-    const customData: Record<string, unknown> = { ...payload };
-    delete customData.jti;
-    delete customData.sub;
-    delete customData.iat;
-    delete customData.exp;
-    delete customData.nbf;
-    delete customData.aud;
-    delete customData.iss;
-
     return this.create({
       id: payload.jti,
       username: payload.sub,
-      expiresIn: (expiresIn || config?.jwt.expiresIn) ?? 7 * 24 * 60 * 60 * 1000,
-      ...customData,
+      expiresIn: expiresIn || config?.jwt.expiresIn || "7d",
     });
   }
 }

@@ -5,6 +5,7 @@ Common utilities and decorators for NestJS applications including caching, i18n,
 ## ✨ Features
 
 - 🎯 **Caching Decorators** - Spring Boot-style `@Cacheable` and `@CacheEvict` decorators with Redis support
+- 👤 **Session Service** - Redis-based session management with JWT token support
 - 🌍 **I18n Utilities** - Enhanced internationalization wrapper with namespace support
 - ⚡ **Response Interceptor** - Unified API response formatting
 - 🚨 **Error Handling** - Global error filter with custom `AppError` class
@@ -85,7 +86,209 @@ export class UserService {
 - `#{0}`, `#{1}`, `#{2}` - Use positional arguments
 - `#{id}`, `#{name}` - Use object properties (when first argument is an object)
 
-### 2. I18n with Namespace Support
+### 2. Session Service
+
+Redis-based session management service, similar to Spring Boot's SessionService. Stores user session information with JWT token support.
+
+#### Setup
+
+```typescript
+import { SessionService } from '@meta-1/nest-common';
+
+@Injectable()
+export class AuthService {
+  constructor(private readonly sessionService: SessionService) {}
+}
+```
+
+#### Usage
+
+```typescript
+import { SessionService, SessionUser } from '@meta-1/nest-common';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly sessionService: SessionService,
+    private readonly tokenService: TokenService,
+  ) {}
+
+  async login(username: string, password: string): Promise<string> {
+    // 1. 验证用户凭证
+    const user = await this.validateUser(username, password);
+    
+    // 2. 创建 JWT token
+    const jwtToken = this.tokenService.create({
+      id: user.id.toString(),
+      username: user.username,
+      expiresIn: '7d',
+    });
+
+    // 3. 构建会话数据
+    const sessionUser: SessionUser = {
+      id: user.id,
+      username: user.username,
+      authorities: ['ROLE_USER', 'ROLE_ADMIN'],
+      apis: [
+        { path: '/api/users', method: 'GET' },
+        { path: '/api/users/:id', method: 'PUT' },
+      ],
+      expiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+      jwtToken,
+    };
+
+    // 4. 存储会话
+    await this.sessionService.login(sessionUser);
+
+    return jwtToken;
+  }
+
+  async logout(token: string): Promise<void> {
+    await this.sessionService.logout(token);
+  }
+
+  async getCurrentUser(token: string): Promise<SessionUser | null> {
+    return await this.sessionService.get(token);
+  }
+
+  async refreshSession(token: string): Promise<boolean> {
+    const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days
+    return await this.sessionService.refresh(token, expiresIn);
+  }
+
+  async isSessionValid(token: string): Promise<boolean> {
+    return await this.sessionService.exists(token);
+  }
+}
+```
+
+#### API Methods
+
+- `login(user: SessionUser): Promise<string>` - 用户登录，存储会话信息，返回 MD5 后的 token
+- `logout(tokenHash: string)` - 用户登出，删除会话信息
+- `get(tokenHash: string)` - 获取会话信息
+- `refresh(tokenHash: string, expiresIn: number)` - 刷新会话过期时间
+- `exists(tokenHash: string)` - 检查会话是否存在
+
+**注意：** 除了 `login` 方法传入原始 jwtToken，其他方法都传入 MD5 后的 token。
+
+#### Redis Key Structure
+
+- Token Key: `session:token:{md5(jwtToken)}`
+- Session Key: `session:user:{username}`
+
+#### 认证拦截器和装饰器
+
+配合 `AuthInterceptor` 和 `@CurrentUser()` 装饰器使用：
+
+```typescript
+import { AuthInterceptor, CurrentUser, SessionUser } from '@meta-1/nest-common';
+
+// 1. 注册全局拦截器
+@Module({
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuthInterceptor,
+    },
+  ],
+})
+export class AppModule {}
+
+// 2. 在 Controller 中使用 @CurrentUser() 装饰器
+@Controller('users')
+export class UserController {
+  @Get('profile')
+  getProfile(@CurrentUser() user: SessionUser) {
+    // user 可能是 undefined（未登录）
+    if (!user) {
+      throw new UnauthorizedException('Please login first');
+    }
+    return user;
+  }
+
+  @Get('info')
+  async getUserInfo(@CurrentUser() user: SessionUser | undefined) {
+    if (!user) {
+      return { message: 'Not logged in' };
+    }
+    return {
+      id: user.id,
+      username: user.username,
+      authorities: user.authorities,
+    };
+  }
+}
+
+// 3. 登录示例
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private readonly sessionService: SessionService,
+    private readonly tokenService: TokenService,
+  ) {}
+
+  @Post('login')
+  async login(@Body() loginDto: LoginDto) {
+    // 验证用户凭证...
+    const user = await this.validateUser(loginDto);
+    
+    // 创建 JWT token
+    const jwtToken = this.tokenService.create({
+      id: user.id.toString(),
+      username: user.username,
+      expiresIn: '7d',
+    });
+
+    // 存储会话，返回 MD5 后的 token
+    const tokenHash = await this.sessionService.login({
+      id: user.id,
+      username: user.username,
+      authorities: ['ROLE_USER'],
+      apis: [{ path: '/api/users', method: 'GET' }],
+      expiresIn: '7d',
+      jwtToken,
+    });
+
+    return {
+      token: tokenHash, // 返回 MD5 后的 token 给客户端
+      username: user.username,
+    };
+  }
+
+  @Post('logout')
+  async logout(@CurrentUser() user: SessionUser) {
+    if (!user) {
+      throw new UnauthorizedException('Not logged in');
+    }
+    // 从 header 中获取 token
+    const token = this.request.headers.authorization?.substring(7);
+    if (token) {
+      await this.sessionService.logout(token);
+    }
+    return { message: 'Logged out successfully' };
+  }
+}
+```
+
+**客户端使用：**
+
+```typescript
+// 1. 登录后获取 token（已经是 MD5 后的）
+const { token } = await fetch('/auth/login', {
+  method: 'POST',
+  body: JSON.stringify({ username, password }),
+});
+
+// 2. 后续请求携带 token
+fetch('/users/profile', {
+  headers: {
+    'Authorization': `Bearer ${token}` // 使用 MD5 后的 token
+  }
+});
+```
+
+### 3. I18n with Namespace Support
 
 Enhanced i18n utilities with automatic namespace prefixing.
 

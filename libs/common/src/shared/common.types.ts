@@ -1,6 +1,8 @@
+import type ms from "ms";
+
 export type JwtConfig = {
   secret: string;
-  expiresIn?: number;
+  expiresIn?: ms.StringValue;
 };
 
 export type CommonConfig = {
