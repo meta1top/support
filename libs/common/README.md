@@ -6,6 +6,7 @@ Common utilities and decorators for NestJS applications including caching, i18n,
 
 - 🎯 **Caching Decorators** - Spring Boot-style `@Cacheable` and `@CacheEvict` decorators with Redis support
 - 👤 **Session Service** - Redis-based session management with JWT token support
+- 🔐 **Authentication** - `@Public` decorator and `AuthGuard` for route protection
 - 🌍 **I18n Utilities** - Enhanced internationalization wrapper with namespace support
 - ⚡ **Response Interceptor** - Unified API response formatting
 - 🚨 **Error Handling** - Global error filter with custom `AppError` class
@@ -288,7 +289,174 @@ fetch('/users/profile', {
 });
 ```
 
-### 3. I18n with Namespace Support
+### 3. @Public 装饰器
+
+标记不需要鉴权的公开路由，配合自定义 Guard 使用。
+
+#### 基本用法
+
+```typescript
+import { Public } from '@meta-1/nest-common';
+
+@Controller('auth')
+export class AuthController {
+  // ✅ 公开路由：标记为不需要鉴权
+  @Public()
+  @Post('login')
+  async login(@Body() loginDto: LoginDto) {
+    return await this.authService.login(loginDto);
+  }
+
+  @Public()
+  @Post('register')
+  async register(@Body() registerDto: RegisterDto) {
+    return await this.authService.register(registerDto);
+  }
+
+  // ❌ 受保护路由：需要登录才能访问（没有 @Public 装饰器）
+  @Post('logout')
+  async logout(@CurrentUser() user: SessionUser) {
+    return await this.authService.logout(user);
+  }
+}
+```
+
+#### 类级别的 @Public
+
+```typescript
+// 整个 Controller 都是公开的
+@Public()
+@Controller('public')
+export class PublicController {
+  @Get('health')
+  health() {
+    return { status: 'ok' };
+  }
+
+  @Get('docs')
+  docs() {
+    return { version: '1.0.0' };
+  }
+}
+```
+
+#### 在自定义 Guard 中使用
+
+```typescript
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY, SessionService } from '@meta-1/nest-common';
+
+@Injectable()
+export class AuthGuard implements CanActivate {
+  constructor(
+    private reflector: Reflector,
+    private sessionService: SessionService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    // 1. 检查是否有 @Public 装饰器
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(), // 方法级别
+      context.getClass(),   // 类级别
+    ]);
+
+    if (isPublic) {
+      return true; // 跳过鉴权
+    }
+
+    // 2. 执行你的鉴权逻辑
+    const request = context.switchToHttp().getRequest();
+    const token = this.extractToken(request);
+    
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    const user = await this.sessionService.get(token);
+    if (!user) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    request.user = user;
+    return true;
+  }
+
+  private extractToken(request: any): string | null {
+    const authHeader = request.headers.authorization;
+    return authHeader?.startsWith('Bearer ') 
+      ? authHeader.substring(7) 
+      : null;
+  }
+}
+
+// 注册全局 Guard
+@Module({
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+#### 高级用法：权限检查
+
+```typescript
+import { SetMetadata } from '@nestjs/common';
+
+// 定义权限装饰器
+export const PERMISSIONS_KEY = 'permissions';
+export const RequirePermissions = (...permissions: string[]) => 
+  SetMetadata(PERMISSIONS_KEY, permissions);
+
+// 使用
+@Controller('users')
+export class UserController {
+  @RequirePermissions('user:read')
+  @Get()
+  list() {
+    return this.userService.list();
+  }
+
+  @Public() // 公开路由
+  @Get('public')
+  publicList() {
+    return this.userService.publicList();
+  }
+}
+
+// 在 Guard 中检查权限
+@Injectable()
+export class PermissionGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    // 检查是否是公开路由
+    const isPublic = this.reflector.get<boolean>(IS_PUBLIC_KEY, context.getHandler());
+    if (isPublic) return true;
+
+    // 检查权限
+    const requiredPermissions = this.reflector.get<string[]>(
+      PERMISSIONS_KEY, 
+      context.getHandler()
+    );
+    
+    if (!requiredPermissions) return true;
+
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    return requiredPermissions.every(permission => 
+      user.authorities?.includes(permission)
+    );
+  }
+}
+```
+
+### 4. I18n with Namespace Support
 
 Enhanced i18n utilities with automatic namespace prefixing.
 
@@ -390,7 +558,7 @@ export class ProductController {
 }
 ```
 
-### 3. Response Interceptor
+### 4. Response Interceptor
 
 Unified API response formatting.
 
@@ -418,7 +586,7 @@ export class UserController {
 }
 ```
 
-### 4. Error Handling
+### 5. Error Handling
 
 Global error filter with custom error class and predefined error codes.
 
@@ -562,7 +730,7 @@ This modular approach keeps error codes organized by domain and prevents conflic
 }
 ```
 
-### 5. Snowflake ID Generator
+### 6. Snowflake ID Generator
 
 Distributed unique ID generation decorator.
 
@@ -584,7 +752,7 @@ export class CreateUserDto {
 - Time-ordered
 - 64-bit integer (returned as string for JavaScript compatibility)
 
-### 6. Locale Sync
+### 7. Locale Sync
 
 Automatic locale file synchronization with hot-reload support.
 
@@ -623,7 +791,7 @@ dist/i18n/
     └── common.json
 ```
 
-### 7. JWT Token Service
+### 8. JWT Token Service
 
 JWT token creation, validation, and parsing service.
 
