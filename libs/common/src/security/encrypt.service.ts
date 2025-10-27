@@ -1,4 +1,4 @@
-import { createCipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { Injectable, Logger } from "@nestjs/common";
 import * as forge from "node-forge";
 
@@ -53,6 +53,40 @@ export class EncryptService {
     } catch (error) {
       this.logger.error("AES 加密失败:", error);
       throw new AppError(ErrorCode.AES_ENCRYPT_ERROR);
+    }
+  }
+
+  /**
+   * 使用 AES-256-CBC 解密密码
+   * @param encryptedText 加密后的密码 (格式: iv:encryptedData，均为 Base64 编码)
+   * @param aesKey AES 密钥 (32 字节)
+   * @returns 解密后的原始密码
+   */
+  decryptWithAES(encryptedText: string, aesKey: string): string {
+    try {
+      // 分离 IV 和加密数据
+      const parts = encryptedText.split(":");
+      if (parts.length !== 2) {
+        throw new Error("加密文本格式错误");
+      }
+
+      const iv = Buffer.from(parts[0], "base64");
+      const encryptedData = parts[1];
+
+      // 确保 aesKey 是 32 字节 (256 位)
+      const key = Buffer.from(aesKey, "utf8").subarray(0, 32);
+
+      // 创建解密器
+      const decipher = createDecipheriv("aes-256-cbc", key, iv);
+
+      // 解密
+      let decrypted = decipher.update(encryptedData, "base64", "utf8");
+      decrypted += decipher.final("utf8");
+
+      return decrypted;
+    } catch (error) {
+      this.logger.error("AES 解密失败:", error);
+      throw new AppError(ErrorCode.AES_DECRYPT_ERROR);
     }
   }
 }

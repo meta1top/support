@@ -16,6 +16,7 @@ export const ErrorCode = {
   // 加密相关错误 (100-199)
   DECRYPT_ERROR: { code: 100, message: "Decrypt error" },
   AES_ENCRYPT_ERROR: { code: 101, message: "AES encrypt error" },
+  AES_DECRYPT_ERROR: { code: 102, message: "AES decrypt error" },
 
   // Token 相关错误 (200-299)
   TOKEN_SECRET_REQUIRED: { code: 200, message: "Token secret is required" },
