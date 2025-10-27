@@ -1,8 +1,0 @@
-import { useTranslation } from "react-i18next";
-
-import { Empty } from "@meta-1/design";
-
-export const Coming = () => {
-  const { t } = useTranslation();
-  return <Empty text={t("敬请期待")} />;
-};

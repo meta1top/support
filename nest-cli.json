@@ -1,23 +1,23 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "apps/server-authub/src",
+  "sourceRoot": "apps/server-demo/src",
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
-    "tsConfigPath": "apps/server-authub/tsconfig.app.json"
+    "tsConfigPath": "apps/server-demo/tsconfig.app.json"
   },
   "monorepo": true,
   "defaultLibraryPrefix": "@meta-1",
-  "root": "apps/server-authub",
+  "root": "apps/server-demo",
   "projects": {
-    "server-authub": {
+    "server-demo": {
       "type": "application",
-      "root": "apps/server-authub",
+      "root": "apps/server-demo",
       "entryFile": "main",
-      "sourceRoot": "apps/server-authub/src",
+      "sourceRoot": "apps/server-demo/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/server-authub/tsconfig.app.json"
+        "tsConfigPath": "apps/server-demo/tsconfig.app.json"
       }
     },
     "common": {
