@@ -22,7 +22,7 @@ export class AppModule {
       DiscoveryModule,
       ConfigModule.forRoot({
         isGlobal: true,
-        envFilePath: ".env",
+        envFilePath: "apps/server-demo/.env",
       }),
       I18nModule.forRoot({
         fallbackLanguage: "zh-CN",

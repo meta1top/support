@@ -38,7 +38,7 @@
     "@meta-1/nest-common": "workspace:*",
     "@meta-1/nest-message": "workspace:*",
     "@meta-1/nest-nacos": "workspace:*",
-    "@meta-1/types": "workspace:*",
+    "@meta-1/nest-types": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
@@ -110,7 +110,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
-    "@biomejs/biome": "^2.2.4",
+    "@biomejs/biome": "2.3.1",
     "@svgr/cli": "^8.1.0",
     "@types/express": "^5.0.0",
     "@types/gulp": "4.0.17",
@@ -164,10 +164,10 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
-      "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
-      "^@app/message(|/.*)$": "<rootDir>/libs/message/src/$1",
-      "^@app/nacos(|/.*)$": "<rootDir>/libs/nacos/src/$1",
-      "^@meta-1/types(|/.*)$": "<rootDir>/libs/types/src/$1"
+      "^@meta-1/nest-common(|/.*)$": "<rootDir>/libs/common/src/$1",
+      "^@meta-1/nest-message(|/.*)$": "<rootDir>/libs/message/src/$1",
+      "^@meta-1/nest-nacos(|/.*)$": "<rootDir>/libs/nacos/src/$1",
+      "^@meta-1/nest-types(|/.*)$": "<rootDir>/libs/types/src/$1"
     }
   },
   "resolutions": {

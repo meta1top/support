@@ -10,7 +10,9 @@ import { setupSwagger } from "./app.swagger";
 import type { AppConfig } from "./app.types";
 
 // 在最开始加载环境变量
-config();
+config({
+  path: path.join(process.cwd(), "apps/server-demo/.env"),
+});
 
 async function bootstrap() {
   const logger = new Logger("Main");
@@ -19,7 +21,7 @@ async function bootstrap() {
   logger.log(`Syncing locales in ${isDevelopment ? "development" : "production"} mode`);
   syncLocales({
     sourceDir: path.join(process.cwd(), "locales"),
-    targetDir: path.join(process.cwd(), "dist/apps/server-authub/i18n"),
+    targetDir: path.join(process.cwd(), "dist/apps/server-demo/i18n"),
     watch: isDevelopment,
   });
   const nacosConfig = await loadNacosConfig<AppConfig>();
