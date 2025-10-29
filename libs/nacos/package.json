@@ -1,6 +1,6 @@
 {
   "name": "@meta-1/nest-nacos",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "NestJS Nacos integration module for configuration management and service discovery",
   "author": "",
   "license": "MIT",
