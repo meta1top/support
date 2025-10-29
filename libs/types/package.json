@@ -1,6 +1,6 @@
 {
   "name": "@meta-1/nest-types",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Shared type definitions and schemas for Meta-1 applications",
   "author": "",
   "license": "MIT",
