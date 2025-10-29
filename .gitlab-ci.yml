@@ -3,25 +3,15 @@
 
 # 定义全局变量
 variables:
-  PNPM_VERSION: "10.11.0"
-  NODE_VERSION: "20.17.0"
   NPM_REGISTRY: "https://registry.npmjs.org/"
 
 # 定义缓存策略
-.pnpm_cache: &pnpm_cache
-  cache:
-    key:
-      files:
-        - pnpm-lock.yaml
-    paths:
-      - .pnpm-store
-
-# 定义 pnpm 安装模板
-.setup_pnpm: &setup_pnpm
-  - corepack enable
-  - corepack prepare pnpm@${PNPM_VERSION} --activate
-  - pnpm config set store-dir .pnpm-store
-  - pnpm install
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - .pnpm-store
 
 # 定义阶段
 stages:
@@ -34,16 +24,15 @@ stages:
 # 发布 nest-common 包
 publish:nest-common:
   stage: publish
-  image: node:${NODE_VERSION}
-  <<: *pnpm_cache
   rules:
     - if: $CI_COMMIT_TAG =~ /^nest-common@/
   before_script:
-    - *setup_pnpm
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install
   script:
     - pnpm build:types
     - pnpm build:common
-    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd libs/common/
     - npm publish
   tags:
@@ -52,17 +41,16 @@ publish:nest-common:
 # 发布 nest-message 包
 publish:nest-message:
   stage: publish
-  image: node:${NODE_VERSION}
-  <<: *pnpm_cache
   rules:
     - if: $CI_COMMIT_TAG =~ /^nest-message@/
   before_script:
-    - *setup_pnpm
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install
   script:
     - pnpm build:types
     - pnpm build:common
     - pnpm build:message
-    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd libs/message/
     - npm publish
   tags:
@@ -71,17 +59,16 @@ publish:nest-message:
 # 发布 nest-nacos 包
 publish:nest-nacos:
   stage: publish
-  image: node:${NODE_VERSION}
-  <<: *pnpm_cache
   rules:
     - if: $CI_COMMIT_TAG =~ /^nest-nacos@/
   before_script:
-    - *setup_pnpm
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install
   script:
     - pnpm build:types
     - pnpm build:common
     - pnpm build:nacos
-    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd libs/nacos/
     - npm publish
   tags:
@@ -90,15 +77,14 @@ publish:nest-nacos:
 # 发布 nest-types 包
 publish:nest-types:
   stage: publish
-  image: node:${NODE_VERSION}
-  <<: *pnpm_cache
   rules:
     - if: $CI_COMMIT_TAG =~ /^nest-types@/
   before_script:
-    - *setup_pnpm
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install
   script:
     - pnpm build:types
-    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd libs/types/
     - npm publish
   tags:
@@ -111,11 +97,10 @@ publish:nest-types:
 # 发布 design 包
 publish:design:
   stage: publish
-  image: node:${NODE_VERSION}
   rules:
     - if: $CI_COMMIT_TAG =~ /^design@/
   script:
-    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd packages/design/
     - npm publish
   tags:
@@ -124,11 +109,10 @@ publish:design:
 # 发布 editor 包
 publish:editor:
   stage: publish
-  image: node:${NODE_VERSION}
   rules:
     - if: $CI_COMMIT_TAG =~ /^editor@/
   script:
-    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd packages/editor/
     - npm publish
   tags:
