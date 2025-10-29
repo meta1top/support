@@ -4,7 +4,6 @@
 # 定义全局变量
 variables:
   NPM_REGISTRY: "registry.npmjs.org"
-  NPM_MIRROR: "https://mirrors.cloud.tencent.com/npm/"
 
 # 定义缓存策略
 cache:
@@ -13,6 +12,7 @@ cache:
       - pnpm-lock.yaml
   paths:
     - .pnpm-store
+  policy: pull-push
 
 # 定义阶段
 stages:
@@ -29,7 +29,6 @@ publish:nest-common:
     - if: $CI_COMMIT_TAG =~ /^nest-common@/
   before_script:
     - pnpm config set store-dir .pnpm-store
-    - pnpm config set registry ${NPM_MIRROR}
     - pnpm install
   script:
     - pnpm build:types
@@ -48,7 +47,6 @@ publish:nest-message:
     - if: $CI_COMMIT_TAG =~ /^nest-message@/
   before_script:
     - pnpm config set store-dir .pnpm-store
-    - pnpm config set registry ${NPM_MIRROR}
     - pnpm install
   script:
     - pnpm build:types
@@ -68,7 +66,6 @@ publish:nest-nacos:
     - if: $CI_COMMIT_TAG =~ /^nest-nacos@/
   before_script:
     - pnpm config set store-dir .pnpm-store
-    - pnpm config set registry ${NPM_MIRROR}
     - pnpm install
   script:
     - pnpm build:types
@@ -88,7 +85,6 @@ publish:nest-types:
     - if: $CI_COMMIT_TAG =~ /^nest-types@/
   before_script:
     - pnpm config set store-dir .pnpm-store
-    - pnpm config set registry ${NPM_MIRROR}
     - pnpm install
   script:
     - pnpm build:types
