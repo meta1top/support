@@ -46,8 +46,6 @@ publish:nest-common:
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd libs/common/
     - npm publish
-  only:
-    - tags
   tags:
     - easykit
 
@@ -67,8 +65,6 @@ publish:nest-message:
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd libs/message/
     - npm publish
-  only:
-    - tags
   tags:
     - easykit
 
@@ -88,8 +84,6 @@ publish:nest-nacos:
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd libs/nacos/
     - npm publish
-  only:
-    - tags
   tags:
     - easykit
 
@@ -107,8 +101,6 @@ publish:nest-types:
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd libs/types/
     - npm publish
-  only:
-    - tags
   tags:
     - easykit
 
@@ -126,8 +118,6 @@ publish:design:
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd packages/design/
     - npm publish
-  only:
-    - tags
   tags:
     - easykit
 
@@ -141,7 +131,5 @@ publish:editor:
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
     - cd packages/editor/
     - npm publish
-  only:
-    - tags
   tags:
     - easykit
