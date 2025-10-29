@@ -6,7 +6,7 @@ name: Node.js Package - Nest Library - Common
 on:
   push:
     tags:
-      - "nest-common.*"
+      - "nest-common@*"
 
 jobs:
   publish:

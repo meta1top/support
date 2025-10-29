@@ -6,7 +6,7 @@ name: Node.js Package - Design
 on:
   push:
     tags:
-      - "design.*"
+      - "design@*"
 
 jobs:
   publish:

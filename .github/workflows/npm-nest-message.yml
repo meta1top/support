@@ -6,7 +6,7 @@ name: Node.js Package - Nest Library - Message
 on:
   push:
     tags:
-      - "nest-message.*"
+      - "nest-message@*"
 
 jobs:
   publish:

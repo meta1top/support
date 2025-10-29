@@ -6,7 +6,7 @@ name: Node.js Package - Editor
 on:
   push:
     tags:
-      - "editor.*"
+      - "editor@*"
 
 jobs:
   publish:

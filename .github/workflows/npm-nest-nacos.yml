@@ -6,7 +6,7 @@ name: Node.js Package - Nest Library - Nacos
 on:
   push:
     tags:
-      - "nest-nacos.*"
+      - "nest-nacos@*"
 
 jobs:
   publish:
