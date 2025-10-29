@@ -1,0 +1,147 @@
+# GitLab CI/CD 配置文件
+# 用于自动发布 npm 包
+
+# 定义全局变量
+variables:
+  PNPM_VERSION: "9"
+  NODE_VERSION: "20"
+  NPM_REGISTRY: "https://registry.npmjs.org/"
+
+# 定义缓存策略
+.pnpm_cache: &pnpm_cache
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+
+# 定义 pnpm 安装模板
+.setup_pnpm: &setup_pnpm
+  - corepack enable
+  - corepack prepare pnpm@${PNPM_VERSION} --activate
+  - pnpm config set store-dir .pnpm-store
+  - pnpm install
+
+# 定义阶段
+stages:
+  - publish
+
+# ===================================
+# Nest 库发布任务
+# ===================================
+
+# 发布 nest-common 包
+publish:nest-common:
+  stage: publish
+  image: node:${NODE_VERSION}
+  <<: *pnpm_cache
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^nest-common@/
+  before_script:
+    - *setup_pnpm
+  script:
+    - pnpm build:types
+    - pnpm build:common
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - cd libs/common/
+    - npm publish
+  only:
+    - tags
+  tags:
+    - easykit
+
+# 发布 nest-message 包
+publish:nest-message:
+  stage: publish
+  image: node:${NODE_VERSION}
+  <<: *pnpm_cache
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^nest-message@/
+  before_script:
+    - *setup_pnpm
+  script:
+    - pnpm build:types
+    - pnpm build:common
+    - pnpm build:message
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - cd libs/message/
+    - npm publish
+  only:
+    - tags
+  tags:
+    - easykit
+
+# 发布 nest-nacos 包
+publish:nest-nacos:
+  stage: publish
+  image: node:${NODE_VERSION}
+  <<: *pnpm_cache
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^nest-nacos@/
+  before_script:
+    - *setup_pnpm
+  script:
+    - pnpm build:types
+    - pnpm build:common
+    - pnpm build:nacos
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - cd libs/nacos/
+    - npm publish
+  only:
+    - tags
+  tags:
+    - easykit
+
+# 发布 nest-types 包
+publish:nest-types:
+  stage: publish
+  image: node:${NODE_VERSION}
+  <<: *pnpm_cache
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^nest-types@/
+  before_script:
+    - *setup_pnpm
+  script:
+    - pnpm build:types
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - cd libs/types/
+    - npm publish
+  only:
+    - tags
+  tags:
+    - easykit
+
+# ===================================
+# 前端包发布任务
+# ===================================
+
+# 发布 design 包
+publish:design:
+  stage: publish
+  image: node:${NODE_VERSION}
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^design@/
+  script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - cd packages/design/
+    - npm publish
+  only:
+    - tags
+  tags:
+    - easykit
+
+# 发布 editor 包
+publish:editor:
+  stage: publish
+  image: node:${NODE_VERSION}
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^editor@/
+  script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - cd packages/editor/
+    - npm publish
+  only:
+    - tags
+  tags:
+    - easykit
