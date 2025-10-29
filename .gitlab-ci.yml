@@ -32,7 +32,7 @@ publish:nest-common:
   script:
     - pnpm build:types
     - pnpm build:common
-    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
     - cd libs/common/
     - npm publish
   tags:
@@ -50,7 +50,7 @@ publish:nest-message:
     - pnpm build:types
     - pnpm build:common
     - pnpm build:message
-    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
     - cd libs/message/
     - npm publish
   tags:
@@ -68,7 +68,7 @@ publish:nest-nacos:
     - pnpm build:types
     - pnpm build:common
     - pnpm build:nacos
-    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
     - cd libs/nacos/
     - npm publish
   tags:
@@ -84,7 +84,7 @@ publish:nest-types:
     - pnpm install
   script:
     - pnpm build:types
-    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
     - cd libs/types/
     - npm publish
   tags:
@@ -100,7 +100,7 @@ publish:design:
   rules:
     - if: $CI_COMMIT_TAG =~ /^design@/
   script:
-    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
     - cd packages/design/
     - npm publish
   tags:
@@ -112,7 +112,7 @@ publish:editor:
   rules:
     - if: $CI_COMMIT_TAG =~ /^editor@/
   script:
-    - echo "//${NPM_REGISTRY#https://}:_authToken=${NPM_TOKEN}" > ~/.npmrc
+    - npm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN}
     - cd packages/editor/
     - npm publish
   tags:
