@@ -3,8 +3,8 @@
 
 # 定义全局变量
 variables:
-  PNPM_VERSION: "9"
-  NODE_VERSION: "20"
+  PNPM_VERSION: "10.11.0"
+  NODE_VERSION: "20.17.0"
   NPM_REGISTRY: "https://registry.npmjs.org/"
 
 # 定义缓存策略
