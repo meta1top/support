@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 
+import { Public } from "@meta-1/nest-common";
 import { SendCodeDto } from "./mail-code.dto";
 import { MailCodeService } from "./mail-code.service";
 
@@ -13,6 +14,7 @@ import { MailCodeService } from "./mail-code.service";
 export class MailCodeController {
   constructor(private readonly mailCodeService: MailCodeService) {}
 
+  @Public()
   @Post("/send")
   @ApiOperation({
     summary: "发送验证码",
