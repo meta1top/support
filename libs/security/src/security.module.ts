@@ -29,7 +29,7 @@ import { TokenService } from "./token";
   ],
   exports: [EncryptService, SecurityConfigService, TokenService, SessionService],
 })
-export class CommonModule implements OnModuleInit {
+export class SecurityModule implements OnModuleInit {
   constructor(
     private readonly nacosConfigService: NacosConfigService,
     private readonly securityConfigService: SecurityConfigService,
