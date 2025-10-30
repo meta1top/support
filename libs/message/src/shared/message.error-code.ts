@@ -21,4 +21,6 @@ export const ErrorCode: Record<string, AppErrorCode> = {
   // 邮件服务错误 (1100-1199)
   MAIL_SERVICE_NOT_CONFIGURED: { code: 1100, message: "Mail service not configured correctly" },
   MAIL_CONTENT_EMPTY: { code: 1101, message: "Email content cannot be empty" },
+
+  CONFIG_NOT_FOUND: { code: 1200, message: "Config not found" },
 };
