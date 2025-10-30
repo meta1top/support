@@ -1,7 +1,7 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 import type { Request } from "express";
 
-import type { SessionUser } from "../session/session.types";
+import { SessionUser } from "../session";
 
 /**
  * 当前用户装饰器

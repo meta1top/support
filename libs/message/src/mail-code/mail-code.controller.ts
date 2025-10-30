@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import { Public } from "@meta-1/nest-common";
+import { Public } from "@meta-1/nest-security";
 import { SendCodeDto } from "./mail-code.dto";
 import { MailCodeService } from "./mail-code.service";
 

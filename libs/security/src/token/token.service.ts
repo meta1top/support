@@ -2,8 +2,9 @@ import { Injectable, Logger } from "@nestjs/common";
 import * as jwt from "jsonwebtoken";
 import ms from "ms";
 
-import { CommonConfigService } from "../config";
-import { AppError, ErrorCode } from "../errors";
+import { AppError } from "@meta-1/nest-common";
+import { SecurityConfigService } from "../config";
+import { ErrorCode } from "../shared";
 import type { CreateTokenData, TokenPayload } from "./token.types";
 
 /**
@@ -15,7 +16,7 @@ import type { CreateTokenData, TokenPayload } from "./token.types";
 export class TokenService {
   private readonly logger = new Logger(TokenService.name);
 
-  constructor(private readonly commonConfigService: CommonConfigService) {}
+  constructor(private readonly securityConfigService: SecurityConfigService) {}
 
   /**
    * 创建 JWT Token
@@ -23,7 +24,7 @@ export class TokenService {
    * @returns JWT Token 字符串
    */
   create(data: CreateTokenData): string {
-    const config = this.commonConfigService.get();
+    const config = this.securityConfigService.get();
     if (!config?.jwt.secret) {
       throw new AppError(ErrorCode.TOKEN_SECRET_REQUIRED);
     }
@@ -65,7 +66,7 @@ export class TokenService {
    */
   check(token: string): boolean {
     try {
-      const config = this.commonConfigService.get();
+      const config = this.securityConfigService.get();
       if (!config?.jwt.secret) {
         throw new AppError(ErrorCode.TOKEN_SECRET_REQUIRED);
       }
@@ -104,7 +105,7 @@ export class TokenService {
    */
   parse(token: string): TokenPayload {
     try {
-      const config = this.commonConfigService.get();
+      const config = this.securityConfigService.get();
       if (!config?.jwt.secret) {
         throw new AppError(ErrorCode.TOKEN_SECRET_REQUIRED);
       }
@@ -177,7 +178,7 @@ export class TokenService {
    * @returns 新的 Token
    */
   refresh(token: string, expiresIn?: ms.StringValue): string {
-    const config = this.commonConfigService.get();
+    const config = this.securityConfigService.get();
     const payload = this.parse(token);
     return this.create({
       id: payload.jti,

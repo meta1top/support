@@ -22,6 +22,27 @@ stages:
 # Nest 库发布任务
 # ===================================
 
+# 发布 nest-types 包
+publish:nest-types:
+  stage: publish
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^nest-types@/
+  before_script:
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install
+  script:
+    - pnpm build:types
+    - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
+    - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+    - echo "=== NPM Config List ==="
+    - npm config list
+    - echo "=== .npmrc Content ==="
+    - cat ~/.npmrc
+    - cd libs/types/
+    - npm publish
+  tags:
+    - easykit
+    
 # 发布 nest-common 包
 publish:nest-common:
   stage: publish
@@ -36,26 +57,6 @@ publish:nest-common:
     - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
     - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
     - cd libs/common/
-    - npm publish
-  tags:
-    - easykit
-
-# 发布 nest-message 包
-publish:nest-message:
-  stage: publish
-  rules:
-    - if: $CI_COMMIT_TAG =~ /^nest-message@/
-  before_script:
-    - pnpm config set store-dir .pnpm-store
-    - pnpm install
-  script:
-    - pnpm build:types
-    - pnpm build:common
-    - pnpm build:nacos
-    - pnpm build:message
-    - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
-    - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
-    - cd libs/message/
     - npm publish
   tags:
     - easykit
@@ -79,23 +80,43 @@ publish:nest-nacos:
   tags:
     - easykit
 
-# 发布 nest-types 包
-publish:nest-types:
+# 发布 nest-security 包
+publish:nest-security:
   stage: publish
   rules:
-    - if: $CI_COMMIT_TAG =~ /^nest-types@/
+    - if: $CI_COMMIT_TAG =~ /^nest-security@/
   before_script:
     - pnpm config set store-dir .pnpm-store
     - pnpm install
   script:
     - pnpm build:types
+    - pnpm build:common
+    - pnpm build:nacos
+    - pnpm build:security
     - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
     - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
-    - echo "=== NPM Config List ==="
-    - npm config list
-    - echo "=== .npmrc Content ==="
-    - cat ~/.npmrc
-    - cd libs/types/
+    - cd libs/security/
+    - npm publish
+  tags:
+    - easykit
+
+# 发布 nest-message 包
+publish:nest-message:
+  stage: publish
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^nest-message@/
+  before_script:
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install
+  script:
+    - pnpm build:types
+    - pnpm build:common
+    - pnpm build:nacos
+    - pnpm build:security
+    - pnpm build:message
+    - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
+    - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+    - cd libs/message/
     - npm publish
   tags:
     - easykit

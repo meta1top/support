@@ -3,7 +3,7 @@ import { InjectRedis } from "@nestjs-modules/ioredis";
 import type { Redis } from "ioredis";
 import ms from "ms";
 
-import { md5 } from "../common.utils";
+import { md5 } from "@meta-1/nest-common";
 import { TokenService } from "../token";
 import type { SessionUser } from "./session.types";
 

@@ -3,31 +3,17 @@ import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE, DiscoveryModule } from "@nestjs/
 import { ZodValidationPipe } from "nestjs-zod";
 
 import { CacheableInitializer } from "./cache";
-import { CommonConfigService } from "./config/common.config.service";
-import { CommonRefreshService } from "./config/common.refresh.service";
 import { ErrorsFilter } from "./errors";
-import { AuthInterceptor, ResponseInterceptor } from "./interceptors";
-import { EncryptService } from "./security";
-import { SessionService } from "./session";
-import { TokenService } from "./token";
+import { ResponseInterceptor } from "./interceptors";
 
 @Global()
 @Module({
   imports: [DiscoveryModule],
   providers: [
-    EncryptService,
-    CommonConfigService,
-    CommonRefreshService,
-    TokenService,
-    SessionService,
     CacheableInitializer,
     {
       provide: APP_PIPE,
       useClass: ZodValidationPipe,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: AuthInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,
@@ -38,6 +24,6 @@ import { TokenService } from "./token";
       useClass: ErrorsFilter,
     },
   ],
-  exports: [EncryptService, CommonConfigService, CommonRefreshService, TokenService, SessionService],
+  exports: [],
 })
 export class CommonModule {}

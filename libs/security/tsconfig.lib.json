@@ -2,17 +2,16 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "outDir": "../../dist/libs/message",
+    "outDir": "../../dist/libs/security",
     "composite": true,
     "rootDir": "./src",
-    "tsBuildInfoFile": "../../dist/libs/message/tsconfig.lib.tsbuildinfo"
+    "tsBuildInfoFile": "../../dist/libs/security/tsconfig.lib.tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
   "references": [
     { "path": "../common/tsconfig.lib.json" },
     { "path": "../nacos/tsconfig.lib.json" },
-    { "path": "../types/tsconfig.lib.json" },
-    { "path": "../security/tsconfig.lib.json" }
+    { "path": "../types/tsconfig.lib.json" }
   ]
 }

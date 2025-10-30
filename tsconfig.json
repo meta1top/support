@@ -29,7 +29,9 @@
       "@meta-1/nest-nacos": ["libs/nacos/src"],
       "@meta-1/nest-nacos/*": ["libs/nacos/src/*"],
       "@meta-1/nest-types": ["libs/types/src"],
-      "@meta-1/nest-types/*": ["libs/types/src/*"]
+      "@meta-1/nest-types/*": ["libs/types/src/*"],
+      "@meta-1/nest-security": ["libs/security/src"],
+      "@meta-1/nest-security/*": ["libs/security/src/*"]
     }
   }
 }

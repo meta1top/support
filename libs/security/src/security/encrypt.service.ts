@@ -2,7 +2,8 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { Injectable, Logger } from "@nestjs/common";
 import * as forge from "node-forge";
 
-import { AppError, ErrorCode } from "../errors";
+import { AppError } from "@meta-1/nest-common";
+import { ErrorCode } from "../shared";
 
 @Injectable()
 export class EncryptService {

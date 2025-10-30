@@ -11,15 +11,6 @@
   "defaultLibraryPrefix": "@meta-1",
   "root": "apps/server-demo",
   "projects": {
-    "server-demo": {
-      "type": "application",
-      "root": "apps/server-demo",
-      "entryFile": "main",
-      "sourceRoot": "apps/server-demo/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/server-demo/tsconfig.app.json"
-      }
-    },
     "common": {
       "type": "library",
       "root": "libs/common",
@@ -48,6 +39,25 @@
       "compilerOptions": {
         "tsConfigPath": "libs/nacos/tsconfig.lib.json",
         "webpack": false
+      }
+    },
+    "security": {
+      "type": "library",
+      "root": "libs/security",
+      "entryFile": "index",
+      "sourceRoot": "libs/security/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/security/tsconfig.lib.json",
+        "webpack": false
+      }
+    },
+    "server-demo": {
+      "type": "application",
+      "root": "apps/server-demo",
+      "entryFile": "main",
+      "sourceRoot": "apps/server-demo/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/server-demo/tsconfig.app.json"
       }
     },
     "types": {

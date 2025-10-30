@@ -15,14 +15,17 @@
     "build:common": "pnpm run build:nest:common && pnpm run copy:common",
     "build:nacos": "pnpm run build:nest:nacos && pnpm run copy:nacos",
     "build:message": "pnpm run build:nest:message && pnpm run copy:message",
+    "build:security": "pnpm run build:nest:security && pnpm run copy:security",
     "start:server": "node dist/apps/server-demo/main",
     "build:nest:common": "nest build common",
     "build:nest:nacos": "nest build nacos",
     "build:nest:message": "nest build message",
+    "build:nest:security": "nest build security",
     "build:nest:types": "nest build types",
     "copy:common": "ts-node -P tsconfig.json scripts/copy-dist.ts common",
     "copy:nacos": "ts-node -P tsconfig.json scripts/copy-dist.ts nacos",
     "copy:message": "ts-node -P tsconfig.json scripts/copy-dist.ts message",
+    "copy:security": "ts-node -P tsconfig.json scripts/copy-dist.ts security",
     "copy:types": "ts-node -P tsconfig.json scripts/copy-dist.ts types",
     "lint": "biome check",
     "format": "biome format --write",
@@ -167,7 +170,8 @@
       "^@meta-1/nest-common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@meta-1/nest-message(|/.*)$": "<rootDir>/libs/message/src/$1",
       "^@meta-1/nest-nacos(|/.*)$": "<rootDir>/libs/nacos/src/$1",
-      "^@meta-1/nest-types(|/.*)$": "<rootDir>/libs/types/src/$1"
+      "^@meta-1/nest-types(|/.*)$": "<rootDir>/libs/types/src/$1",
+      "^@meta-1/security(|/.*)$": "<rootDir>/libs/security/src/$1"
     }
   },
   "resolutions": {
