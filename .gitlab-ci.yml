@@ -39,7 +39,7 @@ publish:nest-types:
     - echo "=== .npmrc Content ==="
     - cat ~/.npmrc
     - cd libs/types/
-    - npm publish
+    - npm publish --access public
   tags:
     - easykit
     
@@ -57,7 +57,7 @@ publish:nest-common:
     - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
     - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
     - cd libs/common/
-    - npm publish
+    - npm publish --access public
   tags:
     - easykit
 
@@ -76,7 +76,7 @@ publish:nest-nacos:
     - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
     - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
     - cd libs/nacos/
-    - npm publish
+    - npm publish --access public
   tags:
     - easykit
 
@@ -96,7 +96,7 @@ publish:nest-security:
     - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
     - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
     - cd libs/security/
-    - npm publish
+    - npm publish --access public
   tags:
     - easykit
 
@@ -117,7 +117,7 @@ publish:nest-message:
     - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
     - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
     - cd libs/message/
-    - npm publish
+    - npm publish --access public
   tags:
     - easykit
 
