@@ -19,6 +19,7 @@ export class MessageModule implements OnModuleInit {
     private readonly messageConfigService: MessageConfigService,
     private readonly mailService: MailService,
   ) {}
+
   onModuleInit() {
     this.nacosConfigService.subscribe<unknown>((config) => {
       const messageConfig = get(config, MESSAGE_CONFIG_KEY);
