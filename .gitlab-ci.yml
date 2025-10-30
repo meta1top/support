@@ -51,6 +51,7 @@ publish:nest-message:
   script:
     - pnpm build:types
     - pnpm build:common
+    - pnpm build:nacos
     - pnpm build:message
     - echo "registry=https://${NPM_REGISTRY}/" > ~/.npmrc
     - echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
