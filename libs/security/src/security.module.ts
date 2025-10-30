@@ -4,7 +4,7 @@ import { get } from "lodash";
 
 import { NacosConfigService } from "@meta-1/nest-nacos";
 import { SecurityConfigService } from "./config/security.config.service";
-import { AuthInterceptor, ResponseInterceptor } from "./interceptors";
+import { AuthInterceptor } from "./interceptors";
 import { EncryptService } from "./security";
 import { SessionService } from "./session";
 import { SECURITY_CONFIG_KEY, SecurityConfig } from "./shared";
@@ -21,10 +21,6 @@ import { TokenService } from "./token";
     {
       provide: APP_INTERCEPTOR,
       useClass: AuthInterceptor,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ResponseInterceptor,
     },
   ],
   exports: [EncryptService, SecurityConfigService, TokenService, SessionService],
