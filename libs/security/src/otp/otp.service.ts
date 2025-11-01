@@ -174,6 +174,12 @@ export class OTPService {
     return secret;
   }
 
+  async getCachedSecretKey(username: string): Promise<string | null> {
+    const cacheKey = `otp:secret:${username}`;
+    const secret = await this.redis.get(cacheKey);
+    return secret;
+  }
+
   /**
    * 从Redis获取缓存的密钥
    * 用于验证用户在启用MFA时输入的验证码
