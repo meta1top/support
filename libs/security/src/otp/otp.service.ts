@@ -103,7 +103,7 @@ export class OTPService {
    *
    * @returns SecretKey
    */
-  generateSecretKey(): string {
+  generateSecret(): string {
     try {
       const seed = this.getSeed();
       const buffer = randomBytes(this.config.secretSize);
@@ -158,9 +158,9 @@ export class OTPService {
    * @param username - 用户名
    * @returns 密钥
    */
-  async getSecretKey(username: string) {
+  async getSecret(username: string) {
     // 生成密钥
-    const secret = this.generateSecretKey();
+    const secret = this.generateSecret();
 
     // 缓存密钥到Redis，过期时间从配置获取（默认5分钟）
     const cacheKey = `otp:secret:${username}`;
@@ -171,12 +171,6 @@ export class OTPService {
 
     this.logger.log(`OTP密钥已生成并缓存: username=${username}, expiresIn=${expiresInSeconds}s`);
 
-    return secret;
-  }
-
-  async getCachedSecretKey(username: string): Promise<string | null> {
-    const cacheKey = `otp:secret:${username}`;
-    const secret = await this.redis.get(cacheKey);
     return secret;
   }
 
