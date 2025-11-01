@@ -3,7 +3,6 @@ import { InjectRedis } from "@nestjs-modules/ioredis";
 import Redis from "ioredis";
 
 import { AppError } from "@meta-1/nest-common";
-import type { MailAction } from "@meta-1/nest-types";
 import { MessageConfigService } from "../config/message.config.service";
 import { MailService } from "../mail";
 import { ErrorCode } from "../shared";
@@ -101,7 +100,7 @@ export class MailCodeService {
    * @param code 验证码
    * @returns 验证是否成功
    */
-  async verify(to: string, action: MailAction, code: string): Promise<boolean> {
+  async verify(to: string, action: string, code: string): Promise<boolean> {
     const config = this.messageConfigService.get();
     if (config?.debug) {
       const isValid = `${code}` === this.generateCode();
@@ -164,7 +163,7 @@ export class MailCodeService {
    * @param action 操作类型
    * @returns Redis Key
    */
-  private buildRedisKey(to: string, action: MailAction): string {
+  private buildRedisKey(to: string, action: string): string {
     return `mail:code:${action}:${to}`;
   }
 
@@ -174,7 +173,7 @@ export class MailCodeService {
    * @param action 操作类型
    * @returns Redis Key
    */
-  private buildRateLimitKey(to: string, action: MailAction): string {
+  private buildRateLimitKey(to: string, action: string): string {
     return `mail:code:ratelimit:${action}:${to}`;
   }
 }
