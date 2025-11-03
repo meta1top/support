@@ -1,17 +1,19 @@
 import * as path from "node:path";
 import { DynamicModule, Logger, Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE, DiscoveryModule } from "@nestjs/core";
+import { DiscoveryModule } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { RedisModule } from "@nestjs-modules/ioredis";
 import { AcceptLanguageResolver, HeaderResolver, I18nJsonLoader, I18nModule, QueryResolver } from "nestjs-i18n";
-import { ZodValidationPipe } from "nestjs-zod";
 import { SnakeNamingStrategy } from "typeorm-naming-strategies";
 
-import { CacheableInitializer, ErrorsFilter, ResponseInterceptor } from "@meta-1/nest-common";
+import { AssetsModule } from "@meta-1/nest-assets";
+import { CommonModule } from "@meta-1/nest-common";
+import { MessageModule } from "@meta-1/nest-message";
 import { NacosModule } from "@meta-1/nest-nacos";
-import { AppController } from "./app.controller";
+import { SecurityModule } from "@meta-1/nest-security";
 import { AppConfig } from "./app.types";
+import { AppController, AssetsController, MailCodeController } from "./controller";
 
 @Module({})
 export class AppModule {
@@ -77,23 +79,9 @@ export class AppModule {
 
     return {
       module: AppModule,
-      imports: [...imports],
-      controllers: [AppController],
-      providers: [
-        CacheableInitializer,
-        {
-          provide: APP_PIPE,
-          useClass: ZodValidationPipe,
-        },
-        {
-          provide: APP_INTERCEPTOR,
-          useClass: ResponseInterceptor,
-        },
-        {
-          provide: APP_FILTER,
-          useClass: ErrorsFilter,
-        },
-      ],
+      imports: [...imports, CommonModule, AssetsModule, MessageModule, SecurityModule],
+      controllers: [AppController, AssetsController, MailCodeController],
+      providers: [],
     };
   }
 }

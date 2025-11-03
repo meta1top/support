@@ -8,6 +8,7 @@ import { AppError } from "./app.error";
 export class ErrorsFilter implements ExceptionFilter {
   private logger = new Logger(ErrorsFilter.name);
   catch(exception: unknown, host: ArgumentsHost) {
+    this.logger.error(exception);
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();

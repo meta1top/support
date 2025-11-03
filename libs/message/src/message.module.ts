@@ -4,13 +4,12 @@ import { get } from "lodash";
 import { NacosConfigService } from "@meta-1/nest-nacos";
 import { MessageConfigService } from "./config";
 import { MailService } from "./mail";
-import { MailCodeController, MailCodeService } from "./mail-code";
+import { MailCodeService } from "./mail-code";
 import { MESSAGE_CONFIG_KEY, MessageConfig } from "./shared";
 
 @Global()
 @Module({
   providers: [MailService, MailCodeService, MessageConfigService],
-  controllers: [MailCodeController],
   exports: [MailService, MailCodeService, MessageConfigService],
 })
 export class MessageModule implements OnModuleInit {

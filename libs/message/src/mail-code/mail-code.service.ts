@@ -102,7 +102,7 @@ export class MailCodeService {
    */
   async verify(to: string, action: string, code: string): Promise<boolean> {
     const config = this.messageConfigService.get();
-    if (config?.debug) {
+    if (config.debug) {
       const isValid = `${code}` === this.generateCode();
       this.logger.debug(`[DEBUG] Verification: ${isValid ? "✅ Passed" : "❌ Failed"}, input: ${code}`);
       return isValid;
@@ -149,7 +149,7 @@ export class MailCodeService {
    */
   private generateCode(): string {
     const config = this.messageConfigService.get();
-    if (config?.debug && config?.code) {
+    if (config.debug && config.code) {
       return `${config.code}`;
     }
 

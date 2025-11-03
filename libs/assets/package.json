@@ -1,0 +1,41 @@
+{
+  "name": "@meta-1/nest-assets",
+  "version": "0.0.1",
+  "description": "NestJS assets module for S3 and OSS object storage",
+  "author": "",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "keywords": [
+    "nestjs",
+    "assets",
+    "s3",
+    "oss",
+    "storage",
+    "upload"
+  ],
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0",
+    "ali-oss": "^6.0.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.0",
+    "lodash": "^4.17.21",
+    "ms": "^2.1.3",
+    "nestjs-zod": "^5.0.1",
+    "zod": "^3.0.0"
+  }
+}

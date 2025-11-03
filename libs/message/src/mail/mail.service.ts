@@ -30,11 +30,11 @@ export class MailService implements OnModuleInit {
   constructor(private readonly messageConfigService: MessageConfigService) {}
 
   onModuleInit() {
-    const config = this.messageConfigService.get();
-    if (config) {
+    try {
+      const config = this.messageConfigService.get();
       this.initializeClient(config);
-    } else {
-      this.logger.warn("MessageConfig not found, MailService not initialized");
+    } catch {
+      this.logger.warn("Message config not found, skipping mail client initialization");
     }
   }
 

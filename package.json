@@ -16,17 +16,20 @@
     "build:nacos": "pnpm run build:nest:nacos && pnpm run copy:nacos",
     "build:message": "pnpm run build:nest:message && pnpm run copy:message",
     "build:security": "pnpm run build:nest:security && pnpm run copy:security",
+    "build:assets": "pnpm run build:nest:assets && pnpm run copy:assets",
     "start:server": "node dist/apps/server-demo/main",
     "build:nest:common": "nest build common",
     "build:nest:nacos": "nest build nacos",
     "build:nest:message": "nest build message",
     "build:nest:security": "nest build security",
+    "build:nest:assets": "nest build assets",
     "build:nest:types": "nest build types",
     "copy:common": "ts-node -P tsconfig.json scripts/copy-dist.ts common",
     "copy:nacos": "ts-node -P tsconfig.json scripts/copy-dist.ts nacos",
     "copy:message": "ts-node -P tsconfig.json scripts/copy-dist.ts message",
     "copy:security": "ts-node -P tsconfig.json scripts/copy-dist.ts security",
     "copy:types": "ts-node -P tsconfig.json scripts/copy-dist.ts types",
+    "copy:assets": "ts-node -P tsconfig.json scripts/copy-dist.ts assets",
     "lint": "biome check",
     "format": "biome format --write",
     "test": "jest",
@@ -41,6 +44,8 @@
     "@meta-1/nest-common": "workspace:*",
     "@meta-1/nest-message": "workspace:*",
     "@meta-1/nest-nacos": "workspace:*",
+    "@meta-1/nest-security": "workspace:*",
+    "@meta-1/nest-assets": "workspace:*",
     "@meta-1/nest-types": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
@@ -107,7 +112,8 @@
     "@alicloud/openapi-client": "^0.4.12",
     "@aws-sdk/client-sesv2": "^3.713.0",
     "nestjs-zod": "^5.0.1",
-    "zod": "3.25.76"
+    "zod": "3.25.76",
+    "ms": "^2.1.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
@@ -167,11 +173,12 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
+      "^@meta-1/nest-assets(|/.*)$": "<rootDir>/libs/assets/src/$1",
       "^@meta-1/nest-common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@meta-1/nest-message(|/.*)$": "<rootDir>/libs/message/src/$1",
       "^@meta-1/nest-nacos(|/.*)$": "<rootDir>/libs/nacos/src/$1",
       "^@meta-1/nest-types(|/.*)$": "<rootDir>/libs/types/src/$1",
-      "^@meta-1/security(|/.*)$": "<rootDir>/libs/security/src/$1"
+      "^@meta-1/nest-security(|/.*)$": "<rootDir>/libs/security/src/$1"
     }
   },
   "resolutions": {

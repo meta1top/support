@@ -11,6 +11,16 @@
   "defaultLibraryPrefix": "@meta-1",
   "root": "apps/server-demo",
   "projects": {
+    "assets": {
+      "type": "library",
+      "root": "libs/assets",
+      "entryFile": "index",
+      "sourceRoot": "libs/assets/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/assets/tsconfig.lib.json",
+        "webpack": false
+      }
+    },
     "common": {
       "type": "library",
       "root": "libs/common",
