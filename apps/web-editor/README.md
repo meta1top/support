@@ -1,6 +1,6 @@
 # Web Editor - 富文本编辑器展示平台
 
-基于 Next.js 15 构建的富文本编辑器展示和测试平台，用于展示 @meta-1/editor 编辑器组件的功能和特性。
+基于 Next.js 16 构建的富文本编辑器展示和测试平台，用于展示 @meta-1/editor 编辑器组件的功能和特性。
 
 ## ✨ 特性
 
@@ -48,13 +48,14 @@ pnpm start
 
 ## 📦 技术栈
 
-- **Next.js 15** - React 应用框架
+- **Next.js 16** - React 应用框架
 - **React 19** - 用户界面库
-- **TypeScript** - 类型安全
+- **TypeScript 5** - 类型安全
 - **@meta-1/editor** - 富文本编辑器组件库
 - **@meta-1/design** - UI 组件库
 - **Tiptap** - 编辑器框架
-- **Tailwind CSS** - 原子化 CSS 框架
+- **ProseMirror** - 编辑器核心
+- **Tailwind CSS 4** - 原子化 CSS 框架
 - **next-themes** - 主题切换支持
 
 ## 🗂️ 项目结构

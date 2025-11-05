@@ -34,34 +34,44 @@ pnpm install
 
 ### 环境变量配置
 
-在项目根目录创建 `.env` 文件：
+在 `apps/server-demo/.env` 文件中配置：
 
 ```env
 # 应用配置
 NODE_ENV=development
 PORT=3100
 
-# Nacos 配置（可选，不配置则跳过）
+# Nacos 配置（必需）
 NACOS_SERVER=localhost:8848
-NACOS_NAMESPACE=public
-NACOS_USERNAME=nacos
-NACOS_PASSWORD=nacos
-NACOS_DATA_ID=app-config
-NACOS_GROUP=DEFAULT_GROUP
+APP_NAME=server-demo
+```
+
+**注意：** 只有以上环境变量需要在 `.env` 文件中配置，其他所有配置（数据库、Redis）都通过 Nacos 配置中心管理。
+
+### Nacos 配置
+
+在 Nacos 配置中心创建配置，Data ID 为 `server-demo`，配置格式为 YAML：
+
+```yaml
+# 数据库配置
+database:
+  host: localhost
+  port: 3306
+  username: root
+  password: your-password
+  database: demo
+  synchronize: false  # 生产环境设为 false
+  logging: false
 
 # Redis 配置
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
-
-# 数据库配置
-DB_TYPE=mysql
-DB_HOST=localhost
-DB_PORT=3306
-DB_USERNAME=root
-DB_PASSWORD=
-DB_DATABASE=demo
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
 ```
+
+**说明：** 应用启动时会从 Nacos 加载配置，根据 `AppConfig` 类型声明自动注入。如果 Nacos 不可用，服务会以降级模式启动（跳过数据库和 Redis 初始化）。
 
 ### 启动服务
 
@@ -170,43 +180,80 @@ export class UserService {
 
 ### Nacos 配置管理
 
-在 `main.ts` 中加载 Nacos 配置：
+应用启动流程：
 
 ```typescript
+// main.ts
 import { loadNacosConfig } from '@meta-1/nest-nacos';
+import type { AppConfig } from './app.types';
 
 async function bootstrap() {
-  // 加载 Nacos 配置
+  // 1. 从 Nacos 加载配置（根据 AppConfig 类型声明）
   const nacosConfig = await loadNacosConfig<AppConfig>();
   
-  // 创建应用
+  // 2. 创建应用，传入配置
   const app = await NestFactory.create(AppModule.forRoot(nacosConfig));
   
-  await app.listen(3100);
+  await app.listen(process.env.PORT ?? 3100);
 }
 ```
 
-在模块中注册 Nacos：
+AppConfig 类型定义：
 
 ```typescript
-import { NacosModule } from '@meta-1/nest-nacos';
-
-@Module({
-  imports: [
-    NacosModule.forRoot({
-      server: process.env.NACOS_SERVER,
-      namespace: process.env.NACOS_NAMESPACE,
-      username: process.env.NACOS_USERNAME,
-      password: process.env.NACOS_PASSWORD,
-      config: {
-        dataId: process.env.NACOS_DATA_ID,
-        group: process.env.NACOS_GROUP,
-      },
-    }),
-  ],
-})
-export class AppModule {}
+// app.types.ts
+export type AppConfig = {
+  database: DatabaseConfig;  // 数据库配置
+  redis: RedisConfig;         // Redis 配置
+};
 ```
+
+模块配置：
+
+```typescript
+// app.module.ts
+@Module({})
+export class AppModule {
+  static forRoot(preloadedConfig: AppConfig | null): DynamicModule {
+    const imports = [
+      // Nacos 模块（只需要环境变量）
+      NacosModule.forRoot({
+        server: process.env.NACOS_SERVER!,
+        naming: {
+          serviceName: process.env.APP_NAME!,
+        },
+        config: {
+          dataId: process.env.APP_NAME!,
+        },
+      }),
+    ];
+
+    // 使用 Nacos 配置初始化数据库
+    if (preloadedConfig?.database) {
+      imports.push(
+        TypeOrmModule.forRoot({
+          type: 'mysql',
+          ...preloadedConfig.database,
+        })
+      );
+    }
+
+    // 使用 Nacos 配置初始化 Redis
+    if (preloadedConfig?.redis) {
+      imports.push(RedisModule.forRoot(preloadedConfig.redis));
+    }
+
+    return { module: AppModule, imports };
+  }
+}
+```
+
+**配置优势：**
+- ✅ 集中式配置管理
+- ✅ 配置热更新（Nacos 支持）
+- ✅ 环境隔离（通过 namespace）
+- ✅ 配置版本管理
+- ✅ 降级支持（Nacos 不可用时以降级模式启动）
 
 ### 统一响应格式
 
