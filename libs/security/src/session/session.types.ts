@@ -11,8 +11,9 @@ export interface SessionApi {
 
 /**
  * 会话用户信息
+ * @template T - 自定义 payload 类型
  */
-export interface SessionUser {
+export interface SessionUser<T = unknown> {
   /** 用户 ID */
   id: string;
   /** 用户名 */
@@ -25,4 +26,6 @@ export interface SessionUser {
   authorities?: string[];
   /** 用户可访问的 API 列表 */
   apis?: SessionApi[];
+  /** 自定义负载数据 */
+  payload?: T;
 }

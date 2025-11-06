@@ -165,6 +165,64 @@ export class SessionService {
   }
 
   /**
+   * 获取用户的 payload 数据
+   * @param tokenHash MD5 后的 token
+   * @returns payload 数据，不存在返回 null
+   */
+  async getPayload<T = unknown>(tokenHash: string): Promise<T | null> {
+    try {
+      const user = await this.get(tokenHash);
+      if (!user || !user.payload) {
+        return null;
+      }
+      return user.payload as T;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Failed to get payload: ${errorMessage}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 设置用户的 payload 数据
+   * 更新会话信息并同步到 Redis 缓存
+   * @param tokenHash MD5 后的 token
+   * @param payload 要设置的 payload 数据
+   * @returns 是否设置成功
+   */
+  async setPayload<T = unknown>(tokenHash: string, payload: T): Promise<boolean> {
+    try {
+      const user = await this.get(tokenHash);
+      if (!user) {
+        this.logger.warn(`Cannot set payload: session not found for token ${this.maskToken(tokenHash)}`);
+        return false;
+      }
+
+      // 更新 user 对象的 payload
+      user.payload = payload;
+
+      // 计算剩余的 TTL
+      const sessionKey = this.buildSessionKey(user.username);
+      const ttl = await this.redis.ttl(sessionKey);
+
+      if (ttl <= 0) {
+        this.logger.warn(`Cannot set payload: session expired for user ${user.username}`);
+        return false;
+      }
+
+      // 更新 Redis 中的会话数据，保持原有的 TTL
+      await this.redis.setex(sessionKey, ttl, JSON.stringify(user));
+
+      this.logger.log(`Payload updated for user: ${user.username}`);
+      return true;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Failed to set payload: ${errorMessage}`, error);
+      return false;
+    }
+  }
+
+  /**
    * 构建 Token Redis Key（从 MD5 hash）
    * @param tokenHash MD5 后的 token
    */
