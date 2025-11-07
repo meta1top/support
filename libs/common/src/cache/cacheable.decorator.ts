@@ -41,28 +41,31 @@ export function Cacheable(options: { key: string; ttl?: number }): MethodDecorat
 
       logger.debug(`Cache key: ${cacheKey}`);
 
+      // 先尝试读取缓存
       try {
-        // 检查缓存
         const cachedValue = await redis.get(cacheKey);
         if (cachedValue) {
           logger.debug(`Cache hit: ${cacheKey}`);
           return JSON.parse(cachedValue);
         }
-
         logger.debug(`Cache miss: ${cacheKey}`);
+      } catch (error) {
+        // 缓存读取失败，记录日志但继续执行原方法
+        logger.warn(`Cache read error: ${error}, executing original method`);
+      }
 
-        // 执行原方法
-        const result = await originalMethod.apply(this, args);
+      // 执行原方法（如果原方法失败，直接抛出错误，不要再次执行）
+      const result = await originalMethod.apply(this, args);
 
-        // 缓存结果
+      // 尝试缓存结果（缓存写入失败不影响返回结果）
+      try {
         await redis.setex(cacheKey, ttl, JSON.stringify(result));
         logger.debug(`Cached result: ${cacheKey}, TTL: ${ttl}s`);
-
-        return result;
       } catch (error) {
-        logger.error(`Cache error: ${error}, fallback to original method`);
-        return originalMethod.apply(this, args);
+        logger.warn(`Cache write error: ${error}, but original method succeeded`);
       }
+
+      return result;
     };
 
     return descriptor;
