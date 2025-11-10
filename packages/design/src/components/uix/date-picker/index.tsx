@@ -15,8 +15,8 @@ export type DatePickerProps = {
   allowClear?: boolean;
   value?: Date;
   onChange?: (value: Date | undefined) => void;
-  visible?: boolean;
-  onSelect?: (value: Date) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>((props, _ref) => {
@@ -28,16 +28,16 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>((props, _r
     className,
     value,
     onChange,
-    visible,
-    onSelect,
+    open,
+    onOpenChange,
   } = props;
 
   const hasValueProp = Object.hasOwn(props, "value");
   const isValueControlled = hasValueProp;
   const [internalDate, setInternalDate] = useState<Date | undefined>(value);
   const [presetValue, setPresetValue] = useState<string>("");
-  const hasVisibleProp = Object.hasOwn(props, "visible");
-  const isOpenControlled = hasVisibleProp;
+  const hasOpenProp = Object.hasOwn(props, "open");
+  const isOpenControlled = hasOpenProp;
   const [internalOpen, setInternalOpen] = useState(false);
 
   useEffect(() => {
@@ -46,17 +46,24 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>((props, _r
     }
   }, [isValueControlled, value]);
 
+  useEffect(() => {
+    if (isOpenControlled) {
+      setInternalOpen(Boolean(open));
+    }
+  }, [isOpenControlled, open]);
+
   const config = useContext(UIXContext);
   const locale = get(config.locale, "DatePicker.locale");
   const formatConfig = formatProp || get(config.locale, "DatePicker.format") || "yyyy-MM-dd";
   const options = get(config.locale, "DatePicker.options");
   const selectedDate = isValueControlled ? value : internalDate;
-  const popoverOpen = isOpenControlled ? visible : internalOpen;
+  const popoverOpen = isOpenControlled ? open : internalOpen;
 
   const closePopover = () => {
     if (!isOpenControlled) {
       setInternalOpen(false);
     }
+    onOpenChange?.(false);
   };
 
   const handleSelect = (nextDate?: Date) => {
@@ -69,7 +76,6 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>((props, _r
     setPresetValue("");
     onChange?.(nextDate);
     closePopover();
-    onSelect?.(nextDate);
   };
 
   const handlePresetChange = (valueStr: string) => {
@@ -101,6 +107,7 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>((props, _r
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange?.(nextOpen);
     if (!isOpenControlled) {
       setInternalOpen(nextOpen);
     }

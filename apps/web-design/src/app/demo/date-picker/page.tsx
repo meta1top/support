@@ -6,7 +6,7 @@ import { DatePicker } from "@meta-1/design";
 
 const Page = () => {
   const [date, setDate] = useState<Date | undefined>(undefined);
-  const [visible, setVisible] = useState<boolean>(true);
+  const [open, setOpen] = useState<boolean>(true);
 
   useEffect(() => {
     console.log(date);
@@ -14,19 +14,16 @@ const Page = () => {
 
   return (
     <div className="p-4">
-      <div onDoubleClick={() => setVisible(true)}>
+      <div onDoubleClick={() => setOpen(true)}>
         <DatePicker
           allowClear={true}
           className="rounded-none border-none shadow-none"
           onChange={setDate}
-          onSelect={() => {
-            console.log("onSelect");
-            setVisible(false);
-          }}
+          onOpenChange={setOpen}
+          open={open}
           placeholder="Select date"
           preset={true}
           value={date}
-          visible={visible}
         />
       </div>
     </div>
