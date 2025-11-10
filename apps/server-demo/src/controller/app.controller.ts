@@ -1,9 +1,8 @@
 import { Controller, Get } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiOperation } from "@nestjs/swagger";
 
 import { I18n, I18nContext } from "@meta-1/nest-common";
 
-@ApiTags("默认接口")
 @Controller()
 export class AppController {
   @Get("/")

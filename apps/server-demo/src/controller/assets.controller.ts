@@ -1,5 +1,5 @@
 import { Body, Controller, Post } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiOperation } from "@nestjs/swagger";
 
 import {
   AssetsService,
@@ -14,7 +14,6 @@ import { Public } from "@meta-1/nest-security";
  * 资源服务控制器
  * 提供文件上传和下载的预签名 URL API 接口
  */
-@ApiTags("AssetsController")
 @Controller("/api/assets")
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}

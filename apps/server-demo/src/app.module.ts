@@ -12,8 +12,9 @@ import { CommonModule } from "@meta-1/nest-common";
 import { MessageModule } from "@meta-1/nest-message";
 import { NacosModule } from "@meta-1/nest-nacos";
 import { SecurityModule } from "@meta-1/nest-security";
-import { AppConfig } from "./app.types";
-import { AppController, AssetsController, MailCodeController } from "./controller";
+import { AppController, AssetsController, MailCodeController, TestLockController } from "./controller";
+import { TestLockService } from "./service";
+import { AppConfig } from "./shared";
 
 @Module({})
 export class AppModule {
@@ -80,8 +81,8 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [...imports, CommonModule, AssetsModule, MessageModule, SecurityModule],
-      controllers: [AppController, AssetsController, MailCodeController],
-      providers: [],
+      controllers: [AppController, AssetsController, MailCodeController, TestLockController],
+      providers: [TestLockService],
     };
   }
 }

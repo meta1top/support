@@ -1,7 +1,7 @@
 {
   "name": "@meta-1/nest-common",
-  "version": "0.0.7",
-  "description": "Common utilities and decorators for NestJS applications including caching, i18n, error handling, and more",
+  "version": "0.0.8",
+  "description": "Common utilities and decorators for NestJS applications including caching, distributed lock, i18n, error handling, and more",
   "author": "",
   "license": "MIT",
   "main": "./dist/index.js",
@@ -23,6 +23,8 @@
     "utilities",
     "decorators",
     "caching",
+    "distributed-lock",
+    "redis-lock",
     "i18n",
     "error-handling",
     "interceptors"

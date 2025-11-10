@@ -5,6 +5,7 @@ Common utilities and decorators for NestJS applications including caching, i18n,
 ## ✨ Features
 
 - 🎯 **Caching Decorators** - Spring Boot-style `@Cacheable` and `@CacheEvict` decorators with Redis support
+- 🔒 **Distributed Lock** - `@WithLock` decorator for distributed locking with Redis
 - 👤 **Session Service** - Redis-based session management with JWT token support
 - 🔐 **Authentication** - `@Public` decorator and `AuthGuard` for route protection
 - 🌍 **I18n Utilities** - Enhanced internationalization wrapper with namespace support
@@ -87,7 +88,179 @@ export class UserService {
 - `#{0}`, `#{1}`, `#{2}` - Use positional arguments
 - `#{id}`, `#{name}` - Use object properties (when first argument is an object)
 
-### 2. Session Service
+### 2. Distributed Lock Decorator
+
+基于 Redis 实现的分布式锁装饰器，确保同一时刻只有一个实例能执行被装饰的方法。适用于防止重复提交、库存扣减、订单创建等关键业务场景。
+
+#### Setup
+
+```typescript
+import { LockInitializer } from '@meta-1/nest-common';
+
+@Module({
+  providers: [LockInitializer],
+})
+export class AppModule {}
+```
+
+#### Usage
+
+```typescript
+import { WithLock } from '@meta-1/nest-common';
+
+@Injectable()
+export class OrderService {
+  // 基础使用：防止同一用户重复创建订单
+  @WithLock({ 
+    key: 'lock:order:create:#{userId}', 
+    ttl: 10000,           // 锁的过期时间：10秒
+    waitTimeout: 3000,    // 等待锁的超时时间：3秒
+  })
+  async createOrder(userId: string, items: OrderItem[]) {
+    // 此方法同一时刻只能有一个实例执行
+    // 同一用户的订单创建操作会被加锁
+    const order = await this.orderRepository.create({
+      userId,
+      items,
+      status: 'pending',
+    });
+    
+    return order;
+  }
+
+  // 防止重复支付
+  @WithLock({ 
+    key: 'lock:payment:#{orderId}', 
+    ttl: 30000,
+    waitTimeout: 0,  // 不等待，立即失败
+    errorMessage: '订单正在支付中，请勿重复提交'
+  })
+  async processPayment(orderId: string, paymentInfo: PaymentInfo) {
+    // 检查订单状态
+    const order = await this.orderRepository.findOne(orderId);
+    if (order.status !== 'pending') {
+      throw new AppError(ErrorCode.ORDER_STATUS_INVALID);
+    }
+
+    // 调用支付网关
+    const result = await this.paymentGateway.pay(paymentInfo);
+    
+    // 更新订单状态
+    await this.orderRepository.update(orderId, { status: 'paid' });
+    
+    return result;
+  }
+
+  // 使用对象属性作为锁键
+  @WithLock({ 
+    key: 'lock:inventory:#{productId}', 
+    ttl: 5000 
+  })
+  async reduceInventory(params: { productId: string; quantity: number }) {
+    const product = await this.productRepository.findOne(params.productId);
+    
+    if (product.inventory < params.quantity) {
+      throw new AppError(ErrorCode.INSUFFICIENT_INVENTORY);
+    }
+    
+    product.inventory -= params.quantity;
+    await this.productRepository.save(product);
+    
+    return product;
+  }
+}
+```
+
+#### Configuration Options
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `key` | `string` | 必填 | 锁的键名，支持占位符 `#{0}`, `#{1}` (参数位置) 或 `#{propertyName}` (对象属性) |
+| `ttl` | `number` | `30000` | 锁的过期时间（毫秒），防止死锁 |
+| `waitTimeout` | `number` | `5000` | 等待锁的超时时间（毫秒），设置为 0 表示不等待 |
+| `retryInterval` | `number` | `100` | 重试获取锁的间隔（毫秒） |
+| `errorMessage` | `string` | `'操作正在处理中，请稍后重试'` | 获取锁失败时的错误提示 |
+
+#### Lock Key Patterns
+
+```typescript
+// 使用参数位置
+@WithLock({ key: 'lock:user:#{0}' })
+async updateUser(userId: string, data: UpdateUserDto) { }
+
+// 使用多个参数
+@WithLock({ key: 'lock:transfer:#{0}:#{1}' })
+async transfer(fromUserId: string, toUserId: string, amount: number) { }
+
+// 使用对象属性
+@WithLock({ key: 'lock:order:#{orderId}:#{userId}' })
+async cancelOrder(params: { orderId: string; userId: string }) { }
+```
+
+#### Best Practices
+
+1. **选择合适的 TTL**
+   - TTL 应该大于方法的最大执行时间
+   - 对于耗时操作，建议设置较长的 TTL（如 30-60 秒）
+   - 对于快速操作，可以设置较短的 TTL（如 5-10 秒）
+
+2. **设置合理的等待超时**
+   - 对于幂等操作，可以设置较长的 `waitTimeout`，允许等待
+   - 对于非幂等操作（如支付），建议设置 `waitTimeout: 0`，立即失败
+
+3. **锁键设计原则**
+   - 锁键应该能唯一标识业务场景
+   - 避免不同业务使用相同的锁键
+   - 推荐格式：`lock:{业务模块}:{操作}:{业务ID}`
+
+4. **适用场景**
+   - ✅ 支付处理、订单创建
+   - ✅ 库存扣减、优惠券领取
+   - ✅ 账户余额变动
+   - ❌ 只读操作（不需要加锁）
+   - ❌ 高频操作（会成为性能瓶颈）
+
+#### Error Handling
+
+```typescript
+import { AppError, LockErrorCode } from '@meta-1/nest-common';
+
+@Controller('orders')
+export class OrderController {
+  @Post()
+  async createOrder(@Body() dto: CreateOrderDto) {
+    try {
+      return await this.orderService.createOrder(dto.userId, dto.items);
+    } catch (error) {
+      if (error instanceof AppError && error.code === LockErrorCode.LOCK_ACQUIRE_FAILED.code) {
+        // 处理获取锁失败的情况
+        return { message: '订单创建中，请稍后重试' };
+      }
+      throw error;
+    }
+  }
+}
+```
+
+#### How It Works
+
+分布式锁的实现基于 Redis 的 `SET NX PX` 原子操作：
+
+1. **获取锁**：使用 `SET key value NX PX ttl` 命令
+   - `NX`：只在键不存在时设置（确保互斥性）
+   - `PX`：设置过期时间（防止死锁）
+
+2. **释放锁**：使用 Lua 脚本验证锁的持有者
+   - 只有锁的创建者才能释放锁
+   - 防止误删其他实例的锁
+
+3. **锁的生命周期**：
+   - 方法执行前：尝试获取锁（支持重试）
+   - 方法执行中：持有锁
+   - 方法执行后：释放锁（在 `finally` 块中）
+   - 异常情况：锁会在 TTL 后自动过期
+
+### 3. Session Service
 
 Redis-based session management service, similar to Spring Boot's SessionService. Stores user session information with JWT token support.
 
@@ -289,7 +462,7 @@ fetch('/users/profile', {
 });
 ```
 
-### 3. @Public 装饰器
+### 4. @Public 装饰器
 
 标记不需要鉴权的公开路由，配合自定义 Guard 使用。
 
@@ -456,7 +629,7 @@ export class PermissionGuard implements CanActivate {
 }
 ```
 
-### 4. I18n with Namespace Support
+### 5. I18n with Namespace Support
 
 Enhanced i18n utilities with automatic namespace prefixing.
 
@@ -558,7 +731,7 @@ export class ProductController {
 }
 ```
 
-### 4. Response Interceptor
+### 6. Response Interceptor
 
 Unified API response formatting.
 
@@ -586,7 +759,7 @@ export class UserController {
 }
 ```
 
-### 5. Error Handling
+### 7. Error Handling
 
 Global error filter with custom error class and predefined error codes.
 
@@ -730,7 +903,7 @@ This modular approach keeps error codes organized by domain and prevents conflic
 }
 ```
 
-### 6. Snowflake ID Generator
+### 8. Snowflake ID Generator
 
 Distributed unique ID generation decorator.
 
@@ -752,7 +925,7 @@ export class CreateUserDto {
 - Time-ordered
 - 64-bit integer (returned as string for JavaScript compatibility)
 
-### 7. Locale Sync
+### 9. Locale Sync
 
 Automatic locale file synchronization with hot-reload support.
 
@@ -791,7 +964,7 @@ dist/i18n/
     └── common.json
 ```
 
-### 8. JWT Token Service
+### 10. JWT Token Service
 
 JWT token creation, validation, and parsing service.
 
@@ -956,8 +1129,10 @@ interface TokenPayload {
 - `@CacheableService()` - Mark a service class for caching support
 - `@Cacheable(options)` - Cache method results
 - `@CacheEvict(options)` - Evict cache entries
+- `@WithLock(options)` - Distributed lock for preventing concurrent execution
 - `@I18n()` - Inject I18nContext into controller methods
 - `@Snowflake()` - Auto-generate Snowflake ID for DTO properties
+- `@Transactional()` - Automatic database transaction management
 
 ### Classes
 
@@ -966,13 +1141,31 @@ interface TokenPayload {
 - `ErrorsFilter` - Global exception filter
 - `ResponseInterceptor` - Response formatting interceptor
 - `TokenService` - JWT token service for creation, validation, and parsing
+- `LockInitializer` - Automatic Redis injection for distributed lock
+- `CacheableInitializer` - Automatic Redis injection for caching
 
 ### Functions
 
 - `syncLocales(options)` - Sync locale files with hot-reload support
 - `createI18nContext(context, namespace)` - Create custom namespace context
-- `injectRedisToInstance(instance, redis)` - Inject Redis into service instances
+- `injectRedisToInstance(instance, redis)` - Inject Redis into service instances for caching
+- `injectRedisForLock(instance, redis)` - Inject Redis into service instances for distributed lock
 - `hasCacheableMetadata(target)` - Check if class has cacheable metadata
+
+### Error Codes
+
+**Lock Error Codes (100-199):**
+- `REDIS_NOT_INJECTED` (100) - Redis not injected
+- `LOCK_ACQUIRE_FAILED` (110) - Failed to acquire lock
+- `LOCK_ACQUIRE_ERROR` (111) - Error while acquiring lock
+- `LOCK_RELEASE_ERROR` (112) - Error while releasing lock
+
+**Common Error Codes (0-999):**
+- `SERVER_ERROR` (500) - Server error
+- `VALIDATION_FAILED` (400) - Validation failed
+- `UNAUTHORIZED` (401) - Unauthorized
+- `FORBIDDEN` (403) - Forbidden
+- `NOT_FOUND` (404) - Not found
 
 ## 📄 License
 

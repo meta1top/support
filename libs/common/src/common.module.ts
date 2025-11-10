@@ -3,6 +3,7 @@ import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE, DiscoveryModule } from "@nestjs/
 import { ZodValidationPipe } from "nestjs-zod";
 
 import { CacheableInitializer } from "./cache";
+import { LockInitializer } from "./decorators";
 import { ErrorsFilter } from "./errors";
 import { ResponseInterceptor } from "./interceptors";
 
@@ -11,6 +12,7 @@ import { ResponseInterceptor } from "./interceptors";
   imports: [DiscoveryModule],
   providers: [
     CacheableInitializer,
+    LockInitializer,
     {
       provide: APP_PIPE,
       useClass: ZodValidationPipe,
