@@ -905,25 +905,114 @@ This modular approach keeps error codes organized by domain and prevents conflic
 
 ### 8. Snowflake ID Generator
 
-Distributed unique ID generation decorator.
+Distributed unique ID generation decorator with batch support.
+
+#### Basic Usage
 
 ```typescript
-import { Snowflake } from '@meta-1/nest-common';
+import { SnowflakeId } from '@meta-1/nest-common';
 
-export class CreateUserDto {
-  @Snowflake()
-  id?: string;  // Auto-generated if not provided
+@Entity()
+export class User {
+  @SnowflakeId()
+  id: string;  // Auto-generated unique ID
   
   name: string;
   email: string;
 }
 ```
 
+#### Batch Insert (批量插入)
+
+批量插入有两种方式，装饰器和手动生成都可以正常工作：
+
+##### 方式 1：使用装饰器（推荐，更简洁）
+
+```typescript
+import { User } from './entities/user.entity';
+
+// ✅ 使用 @SnowflakeId() 装饰器 + save()
+// save() 会触发 @BeforeInsert 钩子，每个实体独立生成 ID
+const users = Array.from({ length: 100 }, (_, i) => 
+  userRepository.create({
+    name: `User ${i}`,
+    email: `user${i}@example.com`,
+  })
+);
+await userRepository.save(users); // 自动生成唯一 ID
+
+// 或者使用实体实例
+const users = Array.from({ length: 100 }, (_, i) => {
+  const user = new User();
+  user.name = `User ${i}`;
+  user.email = `user${i}@example.com`;
+  return user;
+});
+await userRepository.save(users); // @BeforeInsert 自动生成 ID
+```
+
+##### 方式 2：手动生成 ID（需要提前获取 ID 时使用）
+
+```typescript
+import { generateBatchSnowflakeIds } from '@meta-1/nest-common';
+
+// ✅ 手动生成 ID + insert()
+// 适用于需要在插入前获取 ID 的场景（如关联其他表）
+const ids = generateBatchSnowflakeIds(100);
+const users = ids.map((id, i) => ({
+  id,
+  name: `User ${i}`,
+  email: `user${i}@example.com`,
+}));
+await userRepository.insert(users); // 使用预生成的 ID
+
+// 示例：需要同时创建关联数据
+const userIds = generateBatchSnowflakeIds(100);
+const users = userIds.map((id, i) => ({ id, name: `User ${i}` }));
+const profiles = userIds.map(userId => ({ userId, bio: 'New user' }));
+
+await userRepository.insert(users);
+await profileRepository.insert(profiles); // 使用相同的 userId
+```
+
+##### 性能对比
+
+| 方法 | 优点 | 缺点 | 适用场景 |
+|------|------|------|----------|
+| `save()` + 装饰器 | 简洁，自动生成 | 触发完整生命周期钩子，较慢 | 小批量（< 1000），需要验证 |
+| `insert()` + 手动生成 | 快速，批量插入优化 | 需要手动生成 ID | 大批量（> 1000），纯插入 |
+
+#### Manual ID Generation
+
+```typescript
+import { generateSnowflakeId } from '@meta-1/nest-common';
+
+// 单个ID
+const id = generateSnowflakeId();
+console.log(id); // "AzL8n0Y58m7" (11 characters)
+
+// 批量ID
+const ids = generateBatchSnowflakeIds(1000);
+console.log(ids.length); // 1000
+console.log(new Set(ids).size); // 1000 (all unique)
+```
+
+#### Configuration
+
+Set datacenter and worker IDs via environment variables:
+
+```bash
+SNOWFLAKE_DATACENTER_ID=1  # 0-31
+SNOWFLAKE_WORKER_ID=1      # 0-31
+```
+
 **Features:**
-- Generates Twitter Snowflake-style IDs
-- Distributed system friendly
-- Time-ordered
-- 64-bit integer (returned as string for JavaScript compatibility)
+- Generates Twitter Snowflake-style IDs (Base62 encoded)
+- Distributed system friendly with datacenter/worker ID support
+- Time-ordered (sortable)
+- 约 11 个字符（比 UUID 短）
+- High concurrency support (up to 4096 IDs per millisecond)
+- Automatic sequence management to prevent duplicates
 
 ### 9. Locale Sync
 

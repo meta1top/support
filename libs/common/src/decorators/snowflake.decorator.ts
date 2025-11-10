@@ -1,7 +1,55 @@
 import FlakeId from "flake-idgen";
 import { BeforeInsert, PrimaryColumn } from "typeorm";
 
-const flakeIdGen = new FlakeId();
+/**
+ * 雪花ID生成器类
+ * 支持高并发和批量生成，确保ID唯一性
+ */
+class SnowflakeGenerator {
+  private flakeIdGen: FlakeId;
+  private lastTimestamp: number = 0;
+  private sequence: number = 0;
+  private readonly maxSequence: number = 4095; // 12位序列号最大值
+
+  constructor() {
+    this.flakeIdGen = new FlakeId({
+      // 可以通过环境变量配置机器ID和数据中心ID
+      datacenter: Number(process.env.SNOWFLAKE_DATACENTER_ID) || 0,
+      worker: Number(process.env.SNOWFLAKE_WORKER_ID) || 0,
+    });
+  }
+
+  /**
+   * 生成下一个ID
+   * 添加序列号管理，防止同一毫秒内生成重复ID
+   */
+  next(): Buffer {
+    const currentTimestamp = Date.now();
+
+    // 如果在同一毫秒内，增加序列号
+    if (currentTimestamp === this.lastTimestamp) {
+      this.sequence = (this.sequence + 1) & this.maxSequence;
+
+      // 如果序列号用尽，等待下一毫秒
+      if (this.sequence === 0) {
+        let timestamp = Date.now();
+        while (timestamp <= this.lastTimestamp) {
+          timestamp = Date.now();
+        }
+        this.lastTimestamp = timestamp;
+      }
+    } else {
+      // 新的毫秒，重置序列号
+      this.sequence = 0;
+      this.lastTimestamp = currentTimestamp;
+    }
+
+    return this.flakeIdGen.next();
+  }
+}
+
+// 全局单例
+const snowflakeGenerator = new SnowflakeGenerator();
 
 /**
  * Base62 字符集（按 ASCII 顺序：0-9A-Za-z）
@@ -35,11 +83,38 @@ function toBase62(num: bigint): string {
  * @example
  * - 原始: "1234567890123456789" (19位数字)
  * - Base62: "AzL8n0Y58m7" (11个字符)
+ *
+ * 特点：
+ * - 支持高并发批量生成
+ * - 保证同一毫秒内生成的ID唯一
+ * - 序列号用尽时自动等待下一毫秒
  */
 function generateSnowflakeId(): string {
-  const buffer = flakeIdGen.next();
+  const buffer = snowflakeGenerator.next();
   const bigIntId = BigInt(`0x${buffer.toString("hex")}`);
   return toBase62(bigIntId);
+}
+
+/**
+ * 批量生成雪花ID
+ * 用于批量插入场景，确保所有ID唯一
+ *
+ * @param count 生成数量
+ * @returns ID数组
+ *
+ * @example
+ * ```typescript
+ * const ids = generateBatchSnowflakeIds(100);
+ * const users = ids.map(id => ({ id, name: 'User' }));
+ * await repository.insert(users);
+ * ```
+ */
+function generateBatchSnowflakeIds(count: number): string[] {
+  const ids: string[] = [];
+  for (let i = 0; i < count; i++) {
+    ids.push(generateSnowflakeId());
+  }
+  return ids;
 }
 
 /**
@@ -78,4 +153,4 @@ export function SnowflakeId(): PropertyDecorator {
   };
 }
 
-export { generateSnowflakeId };
+export { generateSnowflakeId, generateBatchSnowflakeIds };
