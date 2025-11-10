@@ -1,4 +1,4 @@
-import { forwardRef, useContext, useState } from "react";
+import { forwardRef, type MouseEvent, useContext, useEffect, useState } from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { addDays, format } from "date-fns";
 import get from "lodash/get";
@@ -13,52 +13,128 @@ export type DatePickerProps = {
   preset?: boolean;
   className?: string;
   allowClear?: boolean;
+  value?: Date;
+  onChange?: (value: Date | undefined) => void;
+  visible?: boolean;
+  onSelect?: (value: Date) => void;
 };
 
 export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>((props, _ref) => {
-  const { preset = false, allowClear = false } = props;
-  const [date, setDate] = useState<Date>();
+  const {
+    placeholder,
+    format: formatProp,
+    preset = false,
+    allowClear = false,
+    className,
+    value,
+    onChange,
+    visible,
+    onSelect,
+  } = props;
+
+  const hasValueProp = Object.hasOwn(props, "value");
+  const isValueControlled = hasValueProp;
+  const [internalDate, setInternalDate] = useState<Date | undefined>(value);
   const [presetValue, setPresetValue] = useState<string>("");
+  const hasVisibleProp = Object.hasOwn(props, "visible");
+  const isOpenControlled = hasVisibleProp;
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  useEffect(() => {
+    if (isValueControlled) {
+      setInternalDate(value);
+    }
+  }, [isValueControlled, value]);
 
   const config = useContext(UIXContext);
   const locale = get(config.locale, "DatePicker.locale");
-  const formatConfig = props.format || get(config.locale, "DatePicker.format") || "yyyy-MM-dd";
+  const formatConfig = formatProp || get(config.locale, "DatePicker.format") || "yyyy-MM-dd";
   const options = get(config.locale, "DatePicker.options");
+  const selectedDate = isValueControlled ? value : internalDate;
+  const popoverOpen = isOpenControlled ? visible : internalOpen;
 
-  const calendar = (
-    <Calendar
-      locale={locale}
-      mode="single"
-      onSelect={(v) => {
-        setDate(v);
-        setPresetValue("");
-      }}
-      selected={date}
-    />
-  );
+  const closePopover = () => {
+    if (!isOpenControlled) {
+      setInternalOpen(false);
+    }
+  };
+
+  const handleSelect = (nextDate?: Date) => {
+    if (!nextDate) {
+      return;
+    }
+    if (!isValueControlled) {
+      setInternalDate(nextDate);
+    }
+    setPresetValue("");
+    onChange?.(nextDate);
+    closePopover();
+    onSelect?.(nextDate);
+  };
+
+  const handlePresetChange = (valueStr: string) => {
+    setPresetValue(valueStr);
+    const offset = Number.parseInt(valueStr, 10);
+    if (Number.isNaN(offset)) {
+      if (!isValueControlled) {
+        setInternalDate(undefined);
+      }
+      onChange?.(undefined);
+      return;
+    }
+    const nextDate = addDays(new Date(), offset);
+    if (!isValueControlled) {
+      setInternalDate(nextDate);
+    }
+    onChange?.(nextDate);
+    closePopover();
+  };
+
+  const handleClear = (event: MouseEvent<SVGSVGElement | HTMLSpanElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isValueControlled) {
+      setInternalDate(undefined);
+    }
+    setPresetValue("");
+    onChange?.(undefined);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!isOpenControlled) {
+      setInternalOpen(nextOpen);
+    }
+  };
+
+  const calendar = <Calendar locale={locale} mode="single" onSelect={handleSelect} selected={selectedDate} />;
 
   return (
-    <Popover>
+    <Popover onOpenChange={handleOpenChange} open={popoverOpen}>
       <PopoverTrigger asChild>
         <Button
           className={cn(
             "group w-full justify-start space-x-1 text-left font-normal",
-            !date && "text-muted-foreground",
-            props.className,
+            !selectedDate && "text-muted-foreground",
+            className,
           )}
           variant="outline"
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          <span className="flex-1">{date ? format(date, formatConfig) : props.placeholder}</span>
-          {allowClear && date ? (
-            <Cross2Icon
-              className="hidden group-hover:block"
-              onClick={(e) => {
-                setDate(undefined);
-                setPresetValue("");
-                e.stopPropagation();
+          <span className="flex-1">{selectedDate ? format(selectedDate, formatConfig) : placeholder}</span>
+          {allowClear && selectedDate ? (
+            <span
+              aria-label="Clear date"
+              className="hidden cursor-pointer items-center justify-center group-hover:flex"
+              onClick={handleClear}
+              onPointerDown={(pointerEvent) => {
+                pointerEvent.preventDefault();
+                pointerEvent.stopPropagation();
               }}
-            />
+              role="button"
+              tabIndex={-1}
+            >
+              <Cross2Icon />
+            </span>
           ) : null}
         </Button>
       </PopoverTrigger>
@@ -67,10 +143,7 @@ export const DatePicker = forwardRef<HTMLDivElement, DatePickerProps>((props, _r
           <>
             <Select
               className="w-full"
-              onChange={(value) => {
-                setDate(addDays(new Date(), Number.parseInt(value, 10)));
-                setPresetValue(value);
-              }}
+              onChange={handlePresetChange}
               options={options || []}
               placeholder="请选择"
               value={presetValue}
