@@ -16,7 +16,7 @@
     "url": "https://github.com/zkit-org/packages.git"
   },
   "scripts": {
-    "dev": "next dev -p 4001",
+    "dev": "next dev -p 5701",
     "build": "next build",
     "start": "next start"
   },

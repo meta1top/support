@@ -6,7 +6,7 @@ import remove from "lodash/remove";
 import { type DropzoneOptions, useDropzone } from "react-dropzone";
 import { v4 as uuidv4 } from "uuid";
 
-import { Button, Progress, useMessage } from "@meta-1/design";
+import { Button, Progress, Tooltip, useMessage } from "@meta-1/design";
 import { UIXContext } from "@meta-1/design/components/uix/config-provider";
 import { cn } from "@meta-1/design/lib";
 import type { HandleProps, UploadFile } from "./type";
@@ -166,13 +166,17 @@ export const Uploader = forwardRef<HTMLDivElement, UploaderProps>((props, forwar
         <div className="flex h-8 w-8 items-center justify-center">
           <FileIcon />
         </div>
-        <div className="w-[50%] overflow-hidden overflow-ellipsis whitespace-nowrap text-sm">{file.name}</div>
-        <div className="mx-1 flex-1">
+        <div className="min-w-0 flex-1 overflow-hidden overflow-ellipsis whitespace-nowrap text-sm">{file.name}</div>
+        <div className="mx-1 min-w-0 flex-1">
           {file.status === "uploading" && <Progress className="w-full" value={file.progress} />}
           {file.status === "error" && (
-            <div className="flex items-center justify-end text-red-500">
-              <CrossCircledIcon className="mr-1" />
-              <span className="text-sm"> {file.error?.message}</span>
+            <div className="flex items-center justify-end">
+              <Tooltip content={file.error?.message}>
+                <CrossCircledIcon className="mr-1 flex-shrink-0 text-red-500" />
+              </Tooltip>
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap text-red-500 text-sm">
+                {file.error?.message}
+              </span>
             </div>
           )}
           {file.status === "done" && (

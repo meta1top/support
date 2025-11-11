@@ -14,17 +14,18 @@ const Page = () => {
   return (
     <div className="p-4">
       <Uploader
+        action="/api/upload/file"
         maxFiles={1}
         onChange={setFiles}
-        uploadHandle={(props) => {
-          props.onSuccess({
-            ...props.file,
-            response: {
-              code: 0,
-              data: "https://easykit.cn/api/upload/file/123.png",
-            },
-          });
-        }}
+        // uploadHandle={(props) => {
+        //   props.onSuccess({
+        //     ...props.file,
+        //     response: {
+        //       code: 0,
+        //       data: "https://easykit.cn/api/upload/file/123.png",
+        //     },
+        //   });
+        // }}
         value={files}
       />
     </div>
