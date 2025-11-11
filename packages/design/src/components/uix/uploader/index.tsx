@@ -166,8 +166,8 @@ export const Uploader = forwardRef<HTMLDivElement, UploaderProps>((props, forwar
         <div className="flex h-8 w-8 items-center justify-center">
           <FileIcon />
         </div>
-        <div className="min-w-0 flex-1 overflow-hidden overflow-ellipsis whitespace-nowrap text-sm">{file.name}</div>
-        <div className="mx-1 min-w-0 flex-1">
+        <div className="flex-1 overflow-hidden overflow-ellipsis whitespace-nowrap text-sm">{file.name}</div>
+        <div className="mx-1 w-0 flex-1 flex-shrink-0">
           {file.status === "uploading" && <Progress className="w-full" value={file.progress} />}
           {file.status === "error" && (
             <div className="flex items-center justify-end">
