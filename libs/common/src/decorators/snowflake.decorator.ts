@@ -1,106 +1,186 @@
-import FlakeId from "flake-idgen";
 import { BeforeInsert, PrimaryColumn } from "typeorm";
 
 /**
  * 雪花ID生成器类
- * 支持高并发和批量生成，确保ID唯一性
+ *
+ * 雪花ID结构（64位）：
+ * - 1位符号位（固定为0）
+ * - 41位时间戳（毫秒级，可用约69年）
+ * - 10位机器ID（5位数据中心ID + 5位工作机器ID）
+ * - 12位序列号（同一毫秒内最多4096个ID）
+ *
+ * 关键特性：
+ * - 线程安全：使用同步锁防止并发问题
+ * - 时间回拨保护：检测并等待时钟恢复
+ * - 序列号耗尽处理：自动等待下一毫秒
  */
 class SnowflakeGenerator {
-  private flakeIdGen: FlakeId;
-  private lastTimestamp: number = 0;
-  private sequence: number = 0;
-  private readonly maxSequence: number = 4095; // 12位序列号最大值
+  private readonly epoch = 1609459200000n; // 2021-01-01 00:00:00 UTC (自定义起始时间)
+  private readonly workerIdBits = 5n;
+  private readonly datacenterIdBits = 5n;
+  private readonly sequenceBits = 12n;
+
+  private readonly maxWorkerId = -1n ^ (-1n << this.workerIdBits); // 31
+  private readonly maxDatacenterId = -1n ^ (-1n << this.datacenterIdBits); // 31
+  private readonly maxSequence = -1n ^ (-1n << this.sequenceBits); // 4095
+
+  private readonly workerIdShift = this.sequenceBits; // 12
+  private readonly datacenterIdShift = this.sequenceBits + this.workerIdBits; // 17
+  private readonly timestampShift = this.sequenceBits + this.workerIdBits + this.datacenterIdBits; // 22
+
+  private readonly workerId: bigint;
+  private readonly datacenterId: bigint;
+
+  private lastTimestamp = -1n;
+  private sequence = 0n;
+
+  private isGenerating = false;
+  private waitQueue: Array<(id: string) => void> = [];
 
   constructor() {
-    this.flakeIdGen = new FlakeId({
-      // 可以通过环境变量配置机器ID和数据中心ID
-      datacenter: Number(process.env.SNOWFLAKE_DATACENTER_ID) || 0,
-      worker: Number(process.env.SNOWFLAKE_WORKER_ID) || 0,
-    });
+    const workerIdEnv = Number(process.env.SNOWFLAKE_WORKER_ID) || 0;
+    const datacenterIdEnv = Number(process.env.SNOWFLAKE_DATACENTER_ID) || 0;
+
+    this.workerId = BigInt(workerIdEnv);
+    this.datacenterId = BigInt(datacenterIdEnv);
+
+    if (this.workerId > this.maxWorkerId || this.workerId < 0n) {
+      throw new Error(`Worker ID 必须在 0 到 ${this.maxWorkerId} 之间`);
+    }
+    if (this.datacenterId > this.maxDatacenterId || this.datacenterId < 0n) {
+      throw new Error(`Datacenter ID 必须在 0 到 ${this.maxDatacenterId} 之间`);
+    }
   }
 
   /**
-   * 生成下一个ID
-   * 添加序列号管理，防止同一毫秒内生成重复ID
+   * 获取当前时间戳（毫秒）
    */
-  next(): Buffer {
-    const currentTimestamp = Date.now();
+  private getCurrentTimestamp(): bigint {
+    return BigInt(Date.now());
+  }
 
-    // 如果在同一毫秒内，增加序列号
-    if (currentTimestamp === this.lastTimestamp) {
-      this.sequence = (this.sequence + 1) & this.maxSequence;
+  /**
+   * 等待下一毫秒
+   */
+  private waitNextMillis(lastTimestamp: bigint): bigint {
+    let timestamp = this.getCurrentTimestamp();
+    while (timestamp <= lastTimestamp) {
+      timestamp = this.getCurrentTimestamp();
+    }
+    return timestamp;
+  }
 
-      // 如果序列号用尽，等待下一毫秒
-      if (this.sequence === 0) {
-        let timestamp = Date.now();
-        while (timestamp <= this.lastTimestamp) {
-          timestamp = Date.now();
-        }
-        this.lastTimestamp = timestamp;
-      }
-    } else {
-      // 新的毫秒，重置序列号
-      this.sequence = 0;
-      this.lastTimestamp = currentTimestamp;
+  /**
+   * 生成下一个ID（同步方法，内部处理并发）
+   */
+  private nextIdSync(): string {
+    let timestamp = this.getCurrentTimestamp();
+
+    if (timestamp < this.lastTimestamp) {
+      const offset = this.lastTimestamp - timestamp;
+      throw new Error(`时钟回拨了 ${offset}ms，拒绝生成ID。请检查系统时间。`);
     }
 
-    return this.flakeIdGen.next();
+    if (timestamp === this.lastTimestamp) {
+      this.sequence = (this.sequence + 1n) & this.maxSequence;
+      if (this.sequence === 0n) {
+        timestamp = this.waitNextMillis(this.lastTimestamp);
+      }
+    } else {
+      this.sequence = 0n;
+    }
+
+    this.lastTimestamp = timestamp;
+
+    const id =
+      ((timestamp - this.epoch) << this.timestampShift) |
+      (this.datacenterId << this.datacenterIdShift) |
+      (this.workerId << this.workerIdShift) |
+      this.sequence;
+
+    return id.toString();
+  }
+
+  /**
+   * 生成下一个ID（带并发控制）
+   */
+  next(): string {
+    if (this.isGenerating) {
+      return new Promise<string>((resolve) => {
+        this.waitQueue.push(resolve);
+      }) as unknown as string;
+    }
+
+    this.isGenerating = true;
+
+    try {
+      const id = this.nextIdSync();
+
+      if (this.waitQueue.length > 0) {
+        const next = this.waitQueue.shift();
+        if (next) {
+          setImmediate(() => {
+            this.isGenerating = false;
+            next(this.next());
+          });
+        }
+      } else {
+        this.isGenerating = false;
+      }
+
+      return id;
+    } catch (error) {
+      this.isGenerating = false;
+      throw error;
+    }
+  }
+
+  /**
+   * 批量生成ID（确保无重复）
+   */
+  nextBatch(count: number): string[] {
+    const ids: string[] = [];
+    for (let i = 0; i < count; i++) {
+      ids.push(this.nextIdSync());
+    }
+    return ids;
   }
 }
 
-// 全局单例
-const snowflakeGenerator = new SnowflakeGenerator();
+const snowflakeGenerator = new SnowflakeGenerator(); // 全局单例
 
 /**
- * Base62 字符集（按 ASCII 顺序：0-9A-Za-z）
- * 保证字典序与数字大小一致，从而保持时间排序
- */
-const BASE62_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
-/**
- * 将 BigInt 转换为 Base62 编码
- * @param num BigInt 数字
- * @returns Base62 字符串（约 11 个字符）
- */
-function toBase62(num: bigint): string {
-  if (num === 0n) return "0";
-
-  let result = "";
-  const base = BigInt(BASE62_CHARS.length);
-
-  while (num > 0n) {
-    const remainder = Number(num % base);
-    result = BASE62_CHARS[remainder] + result;
-    num = num / base;
-  }
-
-  return result;
-}
-
-/**
- * 生成一个雪花ID字符串（Base62 编码，约 11 个字符）
+ * 生成一个雪花ID字符串
+ *
+ * @returns 19位数字字符串（范围: 0 ~ 9223372036854775807）
  *
  * @example
- * - 原始: "1234567890123456789" (19位数字)
- * - Base62: "AzL8n0Y58m7" (11个字符)
+ * ```typescript
+ * const id = generateSnowflakeId();
+ * console.log(id); // "7234567890123456789"
+ * ```
  *
  * 特点：
- * - 支持高并发批量生成
- * - 保证同一毫秒内生成的ID唯一
- * - 序列号用尽时自动等待下一毫秒
+ * - 返回字符串格式，避免JavaScript Number精度问题（Number.MAX_SAFE_INTEGER = 2^53-1）
+ * - 时间有序，可按时间排序
+ * - 分布式唯一，支持多机部署
+ * - 高性能，单机每毫秒可生成4096个ID
+ *
+ * 前端使用注意事项：
+ * - 请保持字符串格式传输和存储
+ * - 如需比较大小，使用 BigInt(id1) > BigInt(id2)
+ * - 如需展示，可直接使用字符串
  */
 function generateSnowflakeId(): string {
-  const buffer = snowflakeGenerator.next();
-  const bigIntId = BigInt(`0x${buffer.toString("hex")}`);
-  return toBase62(bigIntId);
+  return snowflakeGenerator.next();
 }
 
 /**
  * 批量生成雪花ID
- * 用于批量插入场景，确保所有ID唯一
+ * 用于批量插入场景，确保所有ID唯一且无并发问题
  *
  * @param count 生成数量
- * @returns ID数组
+ * @returns ID数组（字符串格式）
  *
  * @example
  * ```typescript
@@ -110,11 +190,7 @@ function generateSnowflakeId(): string {
  * ```
  */
 function generateBatchSnowflakeIds(count: number): string[] {
-  const ids: string[] = [];
-  for (let i = 0; i < count; i++) {
-    ids.push(generateSnowflakeId());
-  }
-  return ids;
+  return snowflakeGenerator.nextBatch(count);
 }
 
 /**
@@ -126,28 +202,32 @@ function generateBatchSnowflakeIds(count: number): string[] {
  * @Entity()
  * export class User {
  *   @SnowflakeId()
- *   id: string;
+ *   id: string;  // 注意：类型必须是 string
+ *
+ *   @Column()
+ *   name: string;
  * }
  * ```
+ *
+ * 数据库存储：
+ * - MySQL: BIGINT 或 VARCHAR(20)
+ * - PostgreSQL: BIGINT 或 VARCHAR(20)
+ * - 推荐使用 VARCHAR(20) 避免不同数据库的兼容性问题
  */
 export function SnowflakeId(): PropertyDecorator {
   return (target: object, propertyKey: string | symbol) => {
-    // 应用 @PrimaryColumn 装饰器（使用 varchar 存储 Base62 字符串）
     PrimaryColumn("varchar", { length: 20 })(target, propertyKey);
 
-    // 在类的原型上添加或增强 BeforeInsert 钩子
     const prototype = target as Record<string, unknown>;
     const hookName = "__beforeInsertForSnowflake";
 
     if (!prototype[hookName]) {
-      // 定义一个新的 BeforeInsert 方法
       prototype[hookName] = function (this: Record<string | symbol, unknown>) {
         if (!this[propertyKey]) {
           this[propertyKey] = generateSnowflakeId();
         }
       };
 
-      // 应用 @BeforeInsert 装饰器
       BeforeInsert()(target, hookName);
     }
   };

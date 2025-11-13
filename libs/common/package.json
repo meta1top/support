@@ -1,6 +1,6 @@
 {
   "name": "@meta-1/nest-common",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Common utilities and decorators for NestJS applications including caching, distributed lock, i18n, error handling, and more",
   "author": "",
   "license": "MIT",
