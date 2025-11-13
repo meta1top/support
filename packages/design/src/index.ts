@@ -158,6 +158,8 @@ export type { StepsItemProps, StepsProps } from "./components/uix/steps";
 export { Steps, StepsItem } from "./components/uix/steps";
 export type { SwitchProps } from "./components/uix/switch";
 export { Switch } from "./components/uix/switch";
+export type { TagsInputProps } from "./components/uix/tags-input";
+export { TagsInput } from "./components/uix/tags-input";
 export type { TooltipProps } from "./components/uix/tooltip";
 export { Tooltip } from "./components/uix/tooltip";
 export type { TreeData, TreeProps } from "./components/uix/tree";
