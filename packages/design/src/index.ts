@@ -28,6 +28,23 @@ export {
   CommandSeparator,
   CommandShortcut,
 } from "./components/ui/command";
+export {
+  ContextMenu,
+  ContextMenuCheckboxItem,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuPortal,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "./components/ui/context-menu";
 export * from "./components/ui/dropdown-menu";
 export {
   HoverCard,
@@ -78,10 +95,10 @@ export {
 } from "./components/ui/table";
 export { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 export { Textarea } from "./components/ui/textarea";
+// extend
 export type { ActionProps } from "./components/uix/action";
 export { Action } from "./components/uix/action";
 export type { AlertProps } from "./components/uix/alert";
-// extend
 export { Alert } from "./components/uix/alert";
 export type { ConfirmProps } from "./components/uix/alert-dialog";
 export { useAlert } from "./components/uix/alert-dialog";
