@@ -10,9 +10,14 @@ import { BeforeInsert, PrimaryColumn } from "typeorm";
  * - 12位序列号（同一毫秒内最多4096个ID）
  *
  * 关键特性：
- * - 线程安全：使用同步锁防止并发问题
- * - 时间回拨保护：检测并等待时钟恢复
+ * - 并发安全：通过Promise队列实现真正的并发控制
+ * - 时间回拨保护：检测并拒绝时钟回拨
  * - 序列号耗尽处理：自动等待下一毫秒
+ *
+ * 设计理念：
+ * - 用户只需使用 @SnowflakeId() 装饰器即可
+ * - 内部自动处理所有并发安全问题
+ * - 无需关心ID生成细节
  */
 class SnowflakeGenerator {
   private readonly epoch = 1609459200000n; // 2021-01-01 00:00:00 UTC (自定义起始时间)
@@ -34,8 +39,8 @@ class SnowflakeGenerator {
   private lastTimestamp = -1n;
   private sequence = 0n;
 
-  private isGenerating = false;
-  private waitQueue: Array<(id: string) => void> = [];
+  // 并发控制：使用Promise链确保串行执行
+  private generationChain: Promise<void> = Promise.resolve();
 
   constructor() {
     const workerIdEnv = Number(process.env.SNOWFLAKE_WORKER_ID) || 0;
@@ -71,9 +76,10 @@ class SnowflakeGenerator {
   }
 
   /**
-   * 生成下一个ID（同步方法，内部处理并发）
+   * 核心ID生成逻辑（内部方法，不做并发控制）
+   * 注意：此方法不是线程安全的，必须通过 next() 或 nextAsync() 调用
    */
-  private nextIdSync(): string {
+  private generateIdUnsafe(): string {
     let timestamp = this.getCurrentTimestamp();
 
     if (timestamp < this.lastTimestamp) {
@@ -102,135 +108,155 @@ class SnowflakeGenerator {
   }
 
   /**
-   * 生成下一个ID（带并发控制）
+   * 生成下一个ID（并发安全的异步版本）
+   * 通过Promise链确保所有调用串行执行，避免状态竞争
+   *
+   * 设计说明：
+   * - TypeORM 的钩子支持异步函数，且会等待 Promise 完成
+   * - 通过 Promise 链强制串行，即使批量保存也能保证 ID 唯一
+   * - 无论是单条插入还是批量插入，都使用统一的并发安全机制
    */
-  next(): string {
-    if (this.isGenerating) {
-      return new Promise<string>((resolve) => {
-        this.waitQueue.push(resolve);
-      }) as unknown as string;
-    }
+  async next(): Promise<string> {
+    // 将当前生成任务加入Promise链，确保串行执行
+    const result = this.generationChain.then(() => this.generateIdUnsafe());
 
-    this.isGenerating = true;
+    // 更新链，无论成功或失败都继续
+    this.generationChain = result.then(
+      () => {},
+      () => {},
+    );
 
-    try {
-      const id = this.nextIdSync();
-
-      if (this.waitQueue.length > 0) {
-        const next = this.waitQueue.shift();
-        if (next) {
-          setImmediate(() => {
-            this.isGenerating = false;
-            next(this.next());
-          });
-        }
-      } else {
-        this.isGenerating = false;
-      }
-
-      return id;
-    } catch (error) {
-      this.isGenerating = false;
-      throw error;
-    }
+    return result;
   }
 
   /**
-   * 批量生成ID（确保无重复）
+   * 批量生成ID（并发安全的异步版本）
+   * 通过Promise链确保批量生成的原子性
+   *
+   * @param count 生成数量
+   * @returns ID数组（字符串格式）
    */
-  nextBatch(count: number): string[] {
-    const ids: string[] = [];
-    for (let i = 0; i < count; i++) {
-      ids.push(this.nextIdSync());
+  async nextBatch(count: number): Promise<string[]> {
+    if (count <= 0) {
+      return [];
     }
-    return ids;
+
+    // 通过Promise链确保批量生成的原子性
+    const result = this.generationChain.then(() => {
+      const ids: string[] = [];
+      for (let i = 0; i < count; i++) {
+        ids.push(this.generateIdUnsafe());
+      }
+      return ids;
+    });
+
+    // 更新链
+    this.generationChain = result.then(
+      () => {},
+      () => {},
+    );
+
+    return result;
   }
 }
 
 const snowflakeGenerator = new SnowflakeGenerator(); // 全局单例
 
 /**
- * 生成一个雪花ID字符串
- *
- * @returns 19位数字字符串（范围: 0 ~ 9223372036854775807）
- *
- * @example
- * ```typescript
- * const id = generateSnowflakeId();
- * console.log(id); // "7234567890123456789"
- * ```
- *
- * 特点：
- * - 返回字符串格式，避免JavaScript Number精度问题（Number.MAX_SAFE_INTEGER = 2^53-1）
- * - 时间有序，可按时间排序
- * - 分布式唯一，支持多机部署
- * - 高性能，单机每毫秒可生成4096个ID
- *
- * 前端使用注意事项：
- * - 请保持字符串格式传输和存储
- * - 如需比较大小，使用 BigInt(id1) > BigInt(id2)
- * - 如需展示，可直接使用字符串
- */
-function generateSnowflakeId(): string {
-  return snowflakeGenerator.next();
-}
-
-/**
- * 批量生成雪花ID
- * 用于批量插入场景，确保所有ID唯一且无并发问题
- *
- * @param count 生成数量
- * @returns ID数组（字符串格式）
- *
- * @example
- * ```typescript
- * const ids = generateBatchSnowflakeIds(100);
- * const users = ids.map(id => ({ id, name: 'User' }));
- * await repository.insert(users);
- * ```
- */
-function generateBatchSnowflakeIds(count: number): string[] {
-  return snowflakeGenerator.nextBatch(count);
-}
-
-/**
  * 雪花ID主键装饰器
- * 自动生成分布式唯一ID作为主键
+ *
+ * 使用说明：
+ * 只需在实体类的主键字段上添加此装饰器，即可自动生成分布式唯一ID
+ *
+ * 核心特性：
+ * - ✅ 并发安全：内部使用 Promise 链确保多实例同时插入时 ID 不重复
+ * - ✅ 分布式唯一：支持多机部署（通过环境变量配置 workerId 和 datacenterId）
+ * - ✅ 时间有序：ID 按生成时间递增，有利于数据库索引和范围查询
+ * - ✅ 高性能：单机每毫秒可生成 4096 个唯一 ID
+ * - ✅ 自动处理：无需手动调用任何 ID 生成方法
  *
  * @example
+ * 基础用法：
  * ```typescript
+ * import { Entity, Column } from 'typeorm';
+ * import { SnowflakeId } from '@support/common';
+ *
  * @Entity()
  * export class User {
  *   @SnowflakeId()
- *   id: string;  // 注意：类型必须是 string
+ *   id: string;  // 类型必须是 string
  *
  *   @Column()
  *   name: string;
  * }
+ *
+ * // 使用时无需手动设置 ID
+ * const user = new User();
+ * user.name = 'Alice';
+ * await repository.save(user);  // ID 自动生成
+ * console.log(user.id);  // "7234567890123456789"
  * ```
  *
- * 数据库存储：
- * - MySQL: BIGINT 或 VARCHAR(20)
- * - PostgreSQL: BIGINT 或 VARCHAR(20)
- * - 推荐使用 VARCHAR(20) 避免不同数据库的兼容性问题
+ * @example
+ * 批量插入（完全并发安全）：
+ * ```typescript
+ * const users = [
+ *   { name: 'Alice' },
+ *   { name: 'Bob' },
+ *   { name: 'Charlie' }
+ * ].map(data => {
+ *   const user = new User();
+ *   user.name = data.name;
+ *   return user;
+ * });
+ *
+ * // 批量保存，ID 自动生成且保证唯一
+ * await repository.save(users);
+ * ```
+ *
+ * @example
+ * 多机部署配置：
+ * ```bash
+ * # 服务器 1
+ * SNOWFLAKE_WORKER_ID=0
+ * SNOWFLAKE_DATACENTER_ID=0
+ *
+ * # 服务器 2
+ * SNOWFLAKE_WORKER_ID=1
+ * SNOWFLAKE_DATACENTER_ID=0
+ *
+ * # 最多支持 1024 个节点（32 数据中心 × 32 工作机器）
+ * ```
+ *
+ * 数据库字段类型：
+ * - MySQL: VARCHAR(20) 或 BIGINT
+ * - PostgreSQL: VARCHAR(20) 或 BIGINT
+ * - 推荐使用 VARCHAR(20) 避免数值溢出和兼容性问题
+ *
+ * 前端使用注意：
+ * - ID 以字符串格式传输和存储
+ * - 比较大小使用：BigInt(id1) > BigInt(id2)
+ * - JavaScript Number 最大安全整数为 2^53-1，雪花ID 可达 2^63-1，必须用字符串
  */
 export function SnowflakeId(): PropertyDecorator {
   return (target: object, propertyKey: string | symbol) => {
+    // 配置主键列
     PrimaryColumn("varchar", { length: 20 })(target, propertyKey);
 
     const prototype = target as Record<string, unknown>;
     const hookName = "__beforeInsertForSnowflake";
 
     if (!prototype[hookName]) {
-      prototype[hookName] = function (this: Record<string | symbol, unknown>) {
+      // 使用异步钩子确保并发安全
+      prototype[hookName] = async function (this: Record<string | symbol, unknown>) {
         if (!this[propertyKey]) {
-          this[propertyKey] = generateSnowflakeId();
+          // 通过Promise链确保即使批量插入也不会产生重复ID
+          this[propertyKey] = await snowflakeGenerator.next();
         }
       };
 
+      // 注册TypeORM的BeforeInsert钩子
       BeforeInsert()(target, hookName);
     }
   };
 }
-
-export { generateSnowflakeId, generateBatchSnowflakeIds };
