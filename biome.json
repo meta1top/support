@@ -69,16 +69,7 @@
       "tailwindDirectives": true
     },
     "linter": {
-      "enabled": true,
-      "rules": {
-        "recommended": true,
-        "complexity": {
-          "noImportantStyles": "off"
-        },
-        "correctness": {
-          "noUnknownTypeSelector": "off"
-        }
-      }
+      "enabled": true
     },
     "formatter": {
       "enabled": true
@@ -118,5 +109,20 @@
         "useSortedAttributes": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          },
+          "correctness": {
+            "noUnknownTypeSelector": "off"
+          }
+        }
+      }
+    }
+  ]
 }

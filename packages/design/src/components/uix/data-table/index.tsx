@@ -57,6 +57,7 @@ export interface DataTableProps<TData> {
   showColumnVisibility?: boolean;
   stickyColumns?: StickyColumnProps[];
   checkbox?: boolean;
+  onRowSelectionChange?: (selectedRows: TData[]) => void;
   rowActions?: DropdownMenuItemProps[] | ((cell: TData) => DropdownMenuItemProps[]);
   onRowActionClick?: (item: DropdownMenuItemProps, row: Row<TData>) => void;
   loading?: boolean;
@@ -161,6 +162,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     showColumnVisibility = true,
     rowActions,
     checkbox = false,
+    onRowSelectionChange,
     stickyColumns = [],
     onRowActionClick,
     filter,
@@ -283,6 +285,14 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       rowSelection,
     },
   });
+
+  // 当行选中状态改变时，通知外部
+  useEffect(() => {
+    if (checkbox && onRowSelectionChange) {
+      const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
+      onRowSelectionChange(selectedRows);
+    }
+  }, [rowSelection, checkbox, onRowSelectionChange, table]);
 
   const leftStickyColumns = useMemo<StickyColumnProps[]>(() => {
     const columns: StickyColumnProps[] = [];
