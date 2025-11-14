@@ -8,15 +8,18 @@ const Page = () => {
   const [visible1, setVisible1] = useState(false);
   const [visible2, setVisible2] = useState(false);
   const [visible3, setVisible3] = useState(false);
+  const [visible4, setVisible4] = useState(false);
+  const [loading4, setLoading4] = useState(false);
 
   return (
     <div className="space-y-4 p-4">
       <div>
         <h2 className="mb-2 font-semibold text-lg">测试 Dialog 内容溢出滚动</h2>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <Button onClick={() => setVisible1(true)}>短内容 Dialog</Button>
           <Button onClick={() => setVisible2(true)}>长内容 Dialog（垂直滚动）</Button>
           <Button onClick={() => setVisible3(true)}>宽内容 Dialog（横向滚动）</Button>
+          <Button onClick={() => setVisible4(true)}>无 Footer + Loading</Button>
         </div>
       </div>
 
@@ -139,6 +142,66 @@ const Page = () => {
           </div>
 
           <p className="text-muted-foreground text-sm">横向滚动应该正常工作 ✓</p>
+        </div>
+      </Dialog>
+
+      {/* 无 Footer + Loading 测试 */}
+      <Dialog
+        description="测试没有 Footer 时的底部 padding，以及 loading 状态不影响布局"
+        loading={loading4}
+        onCancel={() => {
+          setVisible4(false);
+          setLoading4(false);
+        }}
+        title="无 Footer + Loading 测试"
+        visible={visible4}
+      >
+        <div className="space-y-4">
+          <div>
+            <h3 className="mb-2 font-semibold">说明</h3>
+            <p className="text-muted-foreground text-sm">
+              这个 Dialog 没有 Footer（没有底部按钮），内容区域应该自动添加 padding-bottom。
+            </p>
+          </div>
+
+          <div className="rounded-md border p-4">
+            <h4 className="mb-2 font-medium">测试要点</h4>
+            <ul className="list-disc space-y-2 pl-5 text-sm">
+              <li>内容区域底部应该有适当的留白（pb-6）</li>
+              <li>点击"触发 Loading"按钮后，loading 层不应该影响布局</li>
+              <li>loading 层使用绝对定位，不参与 flex gap 计算</li>
+              <li>内容的底部间距应该保持不变</li>
+            </ul>
+          </div>
+
+          <div className="rounded-md bg-blue-50 p-4 dark:bg-blue-950">
+            <p className="mb-3 font-medium text-blue-800 dark:text-blue-200">互动测试</p>
+            <Button
+              onClick={() => {
+                setLoading4(true);
+                setTimeout(() => setLoading4(false), 2000);
+              }}
+              size="sm"
+              variant="outline"
+            >
+              触发 Loading（2秒）
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            {[...Array(8)].map((_, i) => (
+              <p className="text-muted-foreground text-sm" key={i}>
+                填充内容 {i + 1} - 这是一段测试文本，用于验证内容区域的滚动和间距是否正常。
+              </p>
+            ))}
+          </div>
+
+          <div className="rounded-md border border-green-500 bg-green-50 p-4 dark:bg-green-950">
+            <p className="font-medium text-green-800 dark:text-green-200">最后一段内容</p>
+            <p className="text-green-700 text-sm dark:text-green-300">
+              如果这段内容和对话框底部有适当的间距，说明 padding-bottom 生效了 ✓
+            </p>
+          </div>
         </div>
       </Dialog>
     </div>
