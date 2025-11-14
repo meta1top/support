@@ -21,6 +21,14 @@ export interface PaginationProps {
   onChange?: (page: number) => void;
   onSizeChange?: (size: number) => void;
   sizeOptions?: number[];
+  /** 简单模式：只显示上一页、当前页、下一页 */
+  simple?: boolean;
+  /** 是否显示总数信息 */
+  showTotal?: boolean;
+  /** 是否显示页面大小选择器 */
+  showSizeChanger?: boolean;
+  /** 是否显示快速跳转 */
+  showQuickJumper?: boolean;
 }
 
 export const SIZE_OPTIONS = [10, 20, 50, 100];
@@ -66,7 +74,18 @@ const generatePageNumbers = (currentPage: number, totalPages: number) => {
 };
 
 export const Pagination: FC<PaginationProps> = (props) => {
-  const { total = 0, page = 1, size = 20, sizeOptions = SIZE_OPTIONS, onChange, onSizeChange } = props;
+  const {
+    total = 0,
+    page = 1,
+    size = 20,
+    sizeOptions = SIZE_OPTIONS,
+    onChange,
+    onSizeChange,
+    simple = false,
+    showTotal = true,
+    showSizeChanger = true,
+    showQuickJumper = true,
+  } = props;
 
   const config = useContext(UIXContext);
   const totalPageText = get(config.locale, "Pagination.totalPage");
@@ -101,14 +120,53 @@ export const Pagination: FC<PaginationProps> = (props) => {
 
   const pageNumbers = generatePageNumbers(page, totalPage);
 
+  if (simple) {
+    // 简单模式渲染
+    return (
+      <div className="flex items-center justify-center">
+        <ShadcnPagination>
+          <PaginationContent>
+            {/* 上一页 */}
+            <PaginationItem>
+              <PaginationPrevious
+                className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                onClick={page === 1 ? undefined : () => onChange?.(page - 1)}
+                size="default"
+              />
+            </PaginationItem>
+
+            {/* 当前页 */}
+            <PaginationItem>
+              <PaginationLink isActive size="default">
+                {page}
+              </PaginationLink>
+            </PaginationItem>
+
+            {/* 下一页 */}
+            <PaginationItem>
+              <PaginationNext
+                className={page === totalPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                onClick={page === totalPage ? undefined : () => onChange?.(page + 1)}
+                size="default"
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </ShadcnPagination>
+      </div>
+    );
+  }
+
+  // 标准模式渲染
   return (
     <div className="flex items-center justify-center space-x-6">
       <ShadcnPagination>
         {/* 总数信息 */}
-        <div className="flex items-center space-x-2 text-muted-foreground text-sm">
-          <span>{totalPageText?.replace("%total", `${total}`)}</span>
-          <span>{totalText?.replace("%page", `${totalPage}`)}</span>
-        </div>
+        {showTotal ? (
+          <div className="flex items-center space-x-2 text-muted-foreground text-sm">
+            <span>{totalPageText?.replace("%total", `${total}`)}</span>
+            <span>{totalText?.replace("%page", `${totalPage}`)}</span>
+          </div>
+        ) : null}
         {/* 分页导航 */}
         <PaginationContent>
           {/* 上一页 */}
@@ -148,32 +206,38 @@ export const Pagination: FC<PaginationProps> = (props) => {
           </PaginationItem>
         </PaginationContent>
         {/* 控制区域 */}
-        <div className="flex items-center space-x-3">
-          {/* 页面大小选择 */}
-          <Select
-            className="w-auto"
-            onChange={(v) => onSizeChange?.(Number(v))}
-            options={sizeOptions.map((v) => ({ label: sizeText?.replace("%size", `${v}`) || "", value: `${v}` }))}
-            value={`${size}`}
-          />
+        {showSizeChanger || showQuickJumper ? (
+          <div className="flex items-center space-x-3">
+            {/* 页面大小选择 */}
+            {showSizeChanger ? (
+              <Select
+                className="w-auto"
+                onChange={(v) => onSizeChange?.(Number(v))}
+                options={sizeOptions.map((v) => ({ label: sizeText?.replace("%size", `${v}`) || "", value: `${v}` }))}
+                value={`${size}`}
+              />
+            ) : null}
 
-          {/* 跳转输入框 */}
-          <div className="flex items-center space-x-1 text-sm">
-            <span>{go}</span>
-            <Input
-              className="h-9 w-12 rounded px-2 text-center"
-              onChange={handleChange}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  onChange?.(Number(pageValue));
-                }
-              }}
-              type="text"
-              value={pageValue}
-            />
-            <span>{goSuffix}</span>
+            {/* 跳转输入框 */}
+            {showQuickJumper ? (
+              <div className="flex items-center space-x-1 text-sm">
+                <span>{go}</span>
+                <Input
+                  className="h-9 w-12 rounded px-2 text-center"
+                  onChange={handleChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      onChange?.(Number(pageValue));
+                    }
+                  }}
+                  type="text"
+                  value={pageValue}
+                />
+                <span>{goSuffix}</span>
+              </div>
+            ) : null}
           </div>
-        </div>
+        ) : null}
       </ShadcnPagination>
     </div>
   );
