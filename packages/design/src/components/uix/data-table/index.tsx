@@ -514,8 +514,8 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
             {renderTableBody()}
           </Table>
         )}
-        <div className={cn("py-4", !mounted && "invisible")}>
-          {showPagination && (
+        {showPagination ? (
+          <div className={cn("py-4", !mounted && "invisible")}>
             <Pagination
               {...(pagination as PaginationProps)}
               onChange={(page: number) => {
@@ -525,8 +525,8 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                 load?.({ size, page: 1 });
               }}
             />
-          )}
-        </div>
+          </div>
+        ) : null}
         {loading || !mounted ? (
           <div className="dark:!bg-black/5 absolute top-0 right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-white/50">
             <Spin />

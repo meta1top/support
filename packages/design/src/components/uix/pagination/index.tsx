@@ -196,8 +196,8 @@ export const Pagination: FC<PaginationProps> = (props) => {
   };
 
   return (
-    <div className="flex items-center justify-center space-x-6">
-      <ShadcnPagination>
+    <div className="flex items-center justify-center">
+      <ShadcnPagination className="flex items-center justify-center gap-md">
         {/* 总数信息 */}
         {showTotal ? (
           <div className="flex items-center space-x-2 text-muted-foreground text-sm">

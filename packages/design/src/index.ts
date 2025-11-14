@@ -8,7 +8,6 @@ export {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@meta-1/design/components/ui/input-otp";
-export { Badge } from "./components/ui/badge";
 export {
   Breadcrumb,
   BreadcrumbItem,
@@ -104,6 +103,8 @@ export type { ConfirmProps } from "./components/uix/alert-dialog";
 export { useAlert } from "./components/uix/alert-dialog";
 export type { AvatarProps } from "./components/uix/avatar";
 export { Avatar } from "./components/uix/avatar";
+export type { BadgeProps } from "./components/uix/badge";
+export { Badge } from "./components/uix/badge";
 export type { BreadcrumbsItemProps, BreadcrumbsProps } from "./components/uix/breadcrumbs";
 export { Breadcrumbs, BreadcrumbsItem } from "./components/uix/breadcrumbs";
 export type { BroadcastChannelProviderProps } from "./components/uix/broadcast-channel-context";

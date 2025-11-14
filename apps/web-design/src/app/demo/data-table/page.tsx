@@ -50,6 +50,7 @@ const Page = () => {
       {!showMaxHeight ? (
         <Card className="shadow-none">
           <DataTable<Project>
+            autoHidePagination={false}
             checkbox={true}
             columns={[
               {
@@ -114,7 +115,7 @@ const Page = () => {
               // router.push(`/i18n/${identifier}/dashboard`);
             }}
             pagination={{
-              total: 10,
+              total: 100,
               page: 1,
               size: 10,
             }}
