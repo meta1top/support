@@ -2,18 +2,144 @@
 
 import { useState } from "react";
 
-import { Dialog } from "@meta-1/design";
+import { Button, Dialog } from "@meta-1/design";
 
 const Page = () => {
-  const [visible, setVisible] = useState(false);
-  const title = "启用二次验证";
+  const [visible1, setVisible1] = useState(false);
+  const [visible2, setVisible2] = useState(false);
+  const [visible3, setVisible3] = useState(false);
+
   return (
-    <div className="p-4">
-      <button className="cursor-pointer" onClick={() => setVisible(true)} type="button">
-        {title}
-      </button>
-      <Dialog maskClosable={false} onCancel={() => setVisible(false)} title={title} visible={visible}>
-        <p>启用二次验证</p>
+    <div className="space-y-4 p-4">
+      <div>
+        <h2 className="mb-2 font-semibold text-lg">测试 Dialog 内容溢出滚动</h2>
+        <div className="flex gap-4">
+          <Button onClick={() => setVisible1(true)}>短内容 Dialog</Button>
+          <Button onClick={() => setVisible2(true)}>长内容 Dialog（垂直滚动）</Button>
+          <Button onClick={() => setVisible3(true)}>宽内容 Dialog（横向滚动）</Button>
+        </div>
+      </div>
+
+      {/* 短内容 Dialog */}
+      <Dialog
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setVisible1(false)} variant="outline">
+              取消
+            </Button>
+            <Button onClick={() => setVisible1(false)}>确定</Button>
+          </div>
+        }
+        onCancel={() => setVisible1(false)}
+        title="短内容测试"
+        visible={visible1}
+      >
+        <div className="space-y-2">
+          <p>这是一个简短的内容。</p>
+          <p>不会触发滚动条。</p>
+        </div>
+      </Dialog>
+
+      {/* 长内容 Dialog - 测试垂直滚动 */}
+      <Dialog
+        description="测试长内容时，header 和 footer 固定，内容区域滚动"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setVisible2(false)} variant="outline">
+              取消
+            </Button>
+            <Button onClick={() => setVisible2(false)}>确定</Button>
+          </div>
+        }
+        onCancel={() => setVisible2(false)}
+        title="长内容测试 - 垂直滚动"
+        visible={visible2}
+      >
+        <div className="space-y-4">
+          <div>
+            <h3 className="mb-2 font-semibold">用户协议</h3>
+            <p className="text-muted-foreground text-sm">欢迎使用我们的服务。在使用之前，请仔细阅读以下条款和条件。</p>
+          </div>
+
+          {[...Array(20)].map((_, index) => (
+            <div className="rounded-md border p-4" key={index}>
+              <h4 className="mb-2 font-medium">第 {index + 1} 条</h4>
+              <p className="text-muted-foreground text-sm">
+                这是第 {index + 1} 条条款的详细内容。用户在使用本服务时，应当遵守相关法律法规，
+                不得利用本服务从事违法违规活动。本公司保留在必要时修改本协议的权利。
+                如有任何疑问，请联系我们的客服团队。
+              </p>
+            </div>
+          ))}
+
+          <div className="rounded-md border border-yellow-500 bg-yellow-50 p-4 dark:bg-yellow-950">
+            <p className="font-medium text-yellow-800 dark:text-yellow-200">最后一项内容</p>
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">
+              滚动到这里说明滚动条工作正常！Header 和 Footer 应该保持固定。
+            </p>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* 宽内容 Dialog - 测试横向滚动 */}
+      <Dialog
+        description="测试宽内容时的横向滚动"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button onClick={() => setVisible3(false)} variant="outline">
+              取消
+            </Button>
+            <Button onClick={() => setVisible3(false)}>确定</Button>
+          </div>
+        }
+        onCancel={() => setVisible3(false)}
+        title="宽内容测试 - 横向滚动"
+        visible={visible3}
+      >
+        <div className="space-y-4">
+          <p>当内容宽度超出时，应该出现横向滚动条：</p>
+
+          <div className="rounded-md border p-4">
+            <h4 className="mb-2 font-medium">代码示例（超宽内容）</h4>
+            <pre className="rounded bg-muted p-3 text-sm" style={{ minWidth: "800px" }}>
+              <code>
+                {`const veryLongFunctionName = (parameter1, parameter2, parameter3, parameter4, parameter5) => {
+  return "这是一个非常长的函数，用来测试横向滚动是否正常工作";
+};`}
+              </code>
+            </pre>
+          </div>
+
+          <div className="rounded-md border p-4">
+            <h4 className="mb-2 font-medium">表格示例（超宽表格）</h4>
+            <table className="min-w-[800px] border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="border p-2 text-left">列1</th>
+                  <th className="border p-2 text-left">列2</th>
+                  <th className="border p-2 text-left">列3</th>
+                  <th className="border p-2 text-left">列4</th>
+                  <th className="border p-2 text-left">列5</th>
+                  <th className="border p-2 text-left">列6</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...Array(5)].map((_, i) => (
+                  <tr className="border-b" key={i}>
+                    <td className="border p-2">数据 {i + 1}-1</td>
+                    <td className="border p-2">数据 {i + 1}-2</td>
+                    <td className="border p-2">数据 {i + 1}-3</td>
+                    <td className="border p-2">数据 {i + 1}-4</td>
+                    <td className="border p-2">数据 {i + 1}-5</td>
+                    <td className="border p-2">数据 {i + 1}-6</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-muted-foreground text-sm">横向滚动应该正常工作 ✓</p>
+        </div>
       </Dialog>
     </div>
   );

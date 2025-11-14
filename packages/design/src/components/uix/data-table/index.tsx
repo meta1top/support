@@ -28,7 +28,6 @@ import {
   type PaginationProps,
   Spin,
 } from "@meta-1/design";
-import { ScrollArea } from "@meta-1/design/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import "./style.css";
 
@@ -368,10 +367,9 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   }, [pagination, autoHidePagination]);
 
   // 渲染表头的通用函数
-  const renderTableHeader = (options: { fixedHeader?: boolean } = {}) => {
-    const { fixedHeader = false } = options;
+  const renderTableHeader = () => {
     return (
-      <TableHeader className={cn(!showHeader && "hidden", fixedHeader && "sticky top-0 z-20 bg-background")}>
+      <TableHeader className={cn(!showHeader && "hidden")}>
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
@@ -394,7 +392,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                   style={
                     sticky.enable
                       ? {
-                          zIndex: fixedHeader ? 30 : 10,
+                          zIndex: 10,
                           minWidth: sticky.width,
                           [sticky.position as string]: sticky.offset,
                         }
@@ -491,14 +489,23 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       ) : null}
       <div className={cn("relative")}>
         {maxHeight ? (
-          // 有高度限制时，使用 ScrollArea 包裹 TableBody，表头固定
-          <div className={cn("rounded-md border", !mounted && "invisible")}>
-            <Table className={classNames("data-table", inCard ? "in-card" : null)}>
-              {renderTableHeader({ fixedHeader: true })}
-            </Table>
-            <ScrollArea style={{ maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight }}>
-              <Table className={classNames("data-table", inCard ? "in-card" : null)}>{renderTableBody()}</Table>
-            </ScrollArea>
+          // 有高度限制时：直接渲染 table 元素，避免 Table 组件自带的 overflow-x-auto 包裹层
+          <div className={cn("overflow-x-auto", !mounted && "invisible")}>
+            <div
+              className="overflow-y-auto"
+              style={{ maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight }}
+            >
+              <table
+                className={classNames(
+                  "data-table data-table-sticky-header w-full caption-bottom text-sm",
+                  inCard ? "in-card" : null,
+                )}
+                data-slot="table"
+              >
+                {renderTableHeader()}
+                {renderTableBody()}
+              </table>
+            </div>
           </div>
         ) : (
           // 无高度限制时，使用原有布局
