@@ -9,6 +9,7 @@ import {
   DialogTitle,
   Dialog as UIDialog,
 } from "@meta-1/design/components/ui/dialog";
+import { ScrollArea } from "@meta-1/design/components/ui/scroll-area";
 import { Spin } from "@meta-1/design/components/uix/spin";
 import { cn } from "@meta-1/design/lib";
 
@@ -55,7 +56,7 @@ export const Dialog: FC<DialogProps> = (props) => {
           <DialogTitle className={cn(!title && "sr-only")}>{title || "Dialog"}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto px-6 py-4">{props.children}</div>
+        <ScrollArea className="min-h-0 flex-1 px-6 py-4">{props.children}</ScrollArea>
         {footer ? <DialogFooter>{footer}</DialogFooter> : null}
         {loading ? (
           <div className={cn("absolute top-0 right-0 bottom-0 left-0 bg-white/50", "flex items-center justify-center")}>

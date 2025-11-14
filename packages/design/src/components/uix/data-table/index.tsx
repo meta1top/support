@@ -28,6 +28,7 @@ import {
   type PaginationProps,
   Spin,
 } from "@meta-1/design";
+import { ScrollArea } from "@meta-1/design/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import "./style.css";
 
@@ -68,6 +69,8 @@ export interface DataTableProps<TData> {
   empty?: string;
   showHeader?: boolean;
   onRowClick?: (row: Row<TData>) => void;
+  /** 表格最大高度，设置后内容区将滚动，表头固定。支持 CSS 单位如 '500px', '50vh' 等 */
+  maxHeight?: string | number;
 }
 
 // 本地存储相关函数
@@ -173,6 +176,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     showHeader = true,
     autoHidePagination = true,
     inCard = false,
+    maxHeight,
   } = props;
 
   const config = useContext(UIXContext);
@@ -363,6 +367,108 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     return pagination;
   }, [pagination, autoHidePagination]);
 
+  // 渲染表头的通用函数
+  const renderTableHeader = (options: { fixedHeader?: boolean } = {}) => {
+    const { fixedHeader = false } = options;
+    return (
+      <TableHeader className={cn(!showHeader && "hidden", fixedHeader && "sticky top-0 z-20 bg-background")}>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => {
+              const sticky = mounted
+                ? getSticky(header.column.id, leftStickyColumns, rightStickyColumns)
+                : { enable: false };
+              const content = header.isPlaceholder
+                ? null
+                : flexRender(header.column.columnDef.header, header.getContext());
+              return (
+                <TableHead
+                  className={cn(
+                    sticky.enable ? "table-sticky-col sticky" : null,
+                    sticky.last ? "table-sticky-col-last" : null,
+                    sticky.first ? "table-sticky-col-first" : null,
+                    // biome-ignore lint/suspicious/noExplicitAny: <className>
+                    (header.column.columnDef as any).className,
+                  )}
+                  key={header.id}
+                  style={
+                    sticky.enable
+                      ? {
+                          zIndex: fixedHeader ? 30 : 10,
+                          minWidth: sticky.width,
+                          [sticky.position as string]: sticky.offset,
+                        }
+                      : undefined
+                  }
+                >
+                  {sticky.enable ? <div className="inner flex h-10 items-center px-2">{content}</div> : content}
+                </TableHead>
+              );
+            })}
+          </TableRow>
+        ))}
+      </TableHeader>
+    );
+  };
+
+  // 渲染表体的通用函数
+  const renderTableBody = () => {
+    return (
+      <TableBody>
+        {table.getRowModel().rows?.length ? (
+          table.getRowModel().rows.map((row) => (
+            <TableRow
+              data-state={row.getIsSelected() && "selected"}
+              key={row.id}
+              onClick={() => props.onRowClick?.(row)}
+            >
+              {row.getVisibleCells().map((cell) => {
+                const sticky = mounted
+                  ? getSticky(cell.column.id, leftStickyColumns, rightStickyColumns)
+                  : { enable: false };
+                const ctx = cell.getContext();
+                const render = ctx.renderValue;
+                // biome-ignore lint/suspicious/noExplicitAny: <formatters>
+                const formatters = (cell.column.columnDef as any).formatters || [];
+                ctx.renderValue = () => {
+                  return formatValue(render(), formatters, cellHandles);
+                };
+                const content = flexRender(cell.column.columnDef.cell, ctx);
+                return (
+                  <TableCell
+                    className={cn(
+                      sticky.enable ? "table-sticky-col sticky" : null,
+                      sticky.last ? "table-sticky-col-last" : null,
+                      sticky.first ? "table-sticky-col-first" : null,
+                    )}
+                    key={cell.id}
+                    style={
+                      sticky.enable
+                        ? {
+                            zIndex: 10,
+                            minWidth: sticky.width,
+                            [sticky.position as string]: sticky.offset,
+                          }
+                        : undefined
+                    }
+                  >
+                    {sticky.enable ? <div className="inner flex h-10 items-center px-2">{content}</div> : content}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell className="h-24 text-center" colSpan={tableColumns.length}>
+              {empty}
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    );
+  };
+
   return (
     <>
       {showToolbar ? (
@@ -384,99 +490,23 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
         </div>
       ) : null}
       <div className={cn("relative")}>
-        <Table className={classNames("data-table", inCard ? "in-card" : null, !mounted && "invisible")}>
-          <TableHeader className={cn(!showHeader && "hidden")}>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  // 在未挂载时禁用粘性列功能，避免 SSR 水合错误
-                  const sticky = mounted
-                    ? getSticky(header.column.id, leftStickyColumns, rightStickyColumns)
-                    : { enable: false };
-                  const content = header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext());
-                  return (
-                    <TableHead
-                      className={cn(
-                        sticky.enable ? "table-sticky-col sticky" : null,
-                        sticky.last ? "table-sticky-col-last" : null,
-                        sticky.first ? "table-sticky-col-first" : null,
-                        // biome-ignore lint/suspicious/noExplicitAny: <className>
-                        (header.column.columnDef as any).className,
-                      )}
-                      key={header.id}
-                      style={
-                        sticky.enable
-                          ? {
-                              zIndex: 10,
-                              minWidth: sticky.width,
-                              [sticky.position as string]: sticky.offset,
-                            }
-                          : undefined
-                      }
-                    >
-                      {sticky.enable ? <div className="inner flex h-10 items-center px-2">{content}</div> : content}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  data-state={row.getIsSelected() && "selected"}
-                  key={row.id}
-                  onClick={() => props.onRowClick?.(row)}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    // 在未挂载时禁用粘性列功能，避免 SSR 水合错误
-                    const sticky = mounted
-                      ? getSticky(cell.column.id, leftStickyColumns, rightStickyColumns)
-                      : { enable: false };
-                    const ctx = cell.getContext();
-                    const render = ctx.renderValue;
-                    // biome-ignore lint/suspicious/noExplicitAny: <formatters>
-                    const formatters = (cell.column.columnDef as any).formatters || [];
-                    ctx.renderValue = () => {
-                      return formatValue(render(), formatters, cellHandles);
-                    };
-                    const content = flexRender(cell.column.columnDef.cell, ctx);
-                    return (
-                      <TableCell
-                        className={cn(
-                          sticky.enable ? "table-sticky-col sticky" : null,
-                          sticky.last ? "table-sticky-col-last" : null,
-                          sticky.first ? "table-sticky-col-first" : null,
-                        )}
-                        key={cell.id}
-                        style={
-                          sticky.enable
-                            ? {
-                                zIndex: 10,
-                                minWidth: sticky.width,
-                                [sticky.position as string]: sticky.offset,
-                              }
-                            : undefined
-                        }
-                      >
-                        {sticky.enable ? <div className="inner flex h-10 items-center px-2">{content}</div> : content}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell className="h-24 text-center" colSpan={tableColumns.length}>
-                  {empty}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        {maxHeight ? (
+          // 有高度限制时，使用 ScrollArea 包裹 TableBody，表头固定
+          <div className={cn("rounded-md border", !mounted && "invisible")}>
+            <Table className={classNames("data-table", inCard ? "in-card" : null)}>
+              {renderTableHeader({ fixedHeader: true })}
+            </Table>
+            <ScrollArea style={{ maxHeight: typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight }}>
+              <Table className={classNames("data-table", inCard ? "in-card" : null)}>{renderTableBody()}</Table>
+            </ScrollArea>
+          </div>
+        ) : (
+          // 无高度限制时，使用原有布局
+          <Table className={classNames("data-table", inCard ? "in-card" : null, !mounted && "invisible")}>
+            {renderTableHeader()}
+            {renderTableBody()}
+          </Table>
+        )}
         <div className={cn("py-4", !mounted && "invisible")}>
           {showPagination && (
             <Pagination
