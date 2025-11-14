@@ -120,43 +120,81 @@ export const Pagination: FC<PaginationProps> = (props) => {
 
   const pageNumbers = generatePageNumbers(page, totalPage);
 
-  if (simple) {
-    // 简单模式渲染
+  // 渲染简单分页导航（只有上一页、当前页、下一页）
+  const renderSimplePagination = () => {
     return (
-      <div className="flex items-center justify-center">
-        <ShadcnPagination>
-          <PaginationContent>
-            {/* 上一页 */}
-            <PaginationItem>
-              <PaginationPrevious
-                className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                onClick={page === 1 ? undefined : () => onChange?.(page - 1)}
-                size="default"
-              />
-            </PaginationItem>
+      <PaginationContent>
+        {/* 上一页 */}
+        <PaginationItem>
+          <PaginationPrevious
+            className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+            onClick={page === 1 ? undefined : () => onChange?.(page - 1)}
+            size="default"
+          />
+        </PaginationItem>
 
-            {/* 当前页 */}
-            <PaginationItem>
-              <PaginationLink isActive size="default">
-                {page}
-              </PaginationLink>
-            </PaginationItem>
+        {/* 当前页 */}
+        <PaginationItem>
+          <PaginationLink isActive size="default">
+            {page}
+          </PaginationLink>
+        </PaginationItem>
 
-            {/* 下一页 */}
-            <PaginationItem>
-              <PaginationNext
-                className={page === totalPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                onClick={page === totalPage ? undefined : () => onChange?.(page + 1)}
-                size="default"
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </ShadcnPagination>
-      </div>
+        {/* 下一页 */}
+        <PaginationItem>
+          <PaginationNext
+            className={page === totalPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+            onClick={page === totalPage ? undefined : () => onChange?.(page + 1)}
+            size="default"
+          />
+        </PaginationItem>
+      </PaginationContent>
     );
-  }
+  };
 
-  // 标准模式渲染
+  // 渲染完整分页导航（包含所有页码）
+  const renderFullPagination = () => {
+    return (
+      <PaginationContent>
+        {/* 上一页 */}
+        <PaginationItem>
+          <PaginationPrevious
+            className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+            onClick={page === 1 ? undefined : () => onChange?.(page - 1)}
+            size="default"
+          />
+        </PaginationItem>
+
+        {/* 页码数字 */}
+        {pageNumbers.map((pageNum, index) => (
+          <PaginationItem key={pageNum === "ellipsis" ? `ellipsis-${index}` : `page-${pageNum}`}>
+            {pageNum === "ellipsis" ? (
+              <PaginationEllipsis />
+            ) : (
+              <PaginationLink
+                className="cursor-pointer"
+                isActive={pageNum === page}
+                onClick={() => onChange?.(pageNum)}
+                size="default"
+              >
+                {pageNum}
+              </PaginationLink>
+            )}
+          </PaginationItem>
+        ))}
+
+        {/* 下一页 */}
+        <PaginationItem>
+          <PaginationNext
+            className={page === totalPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+            onClick={page === totalPage ? undefined : () => onChange?.(page + 1)}
+            size="default"
+          />
+        </PaginationItem>
+      </PaginationContent>
+    );
+  };
+
   return (
     <div className="flex items-center justify-center space-x-6">
       <ShadcnPagination>
@@ -168,43 +206,7 @@ export const Pagination: FC<PaginationProps> = (props) => {
           </div>
         ) : null}
         {/* 分页导航 */}
-        <PaginationContent>
-          {/* 上一页 */}
-          <PaginationItem>
-            <PaginationPrevious
-              className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              onClick={page === 1 ? undefined : () => onChange?.(page - 1)}
-              size="default"
-            />
-          </PaginationItem>
-
-          {/* 页码数字 */}
-          {pageNumbers.map((pageNum, index) => (
-            <PaginationItem key={pageNum === "ellipsis" ? `ellipsis-${index}` : `page-${pageNum}`}>
-              {pageNum === "ellipsis" ? (
-                <PaginationEllipsis />
-              ) : (
-                <PaginationLink
-                  className="cursor-pointer"
-                  isActive={pageNum === page}
-                  onClick={() => onChange?.(pageNum)}
-                  size="default"
-                >
-                  {pageNum}
-                </PaginationLink>
-              )}
-            </PaginationItem>
-          ))}
-
-          {/* 下一页 */}
-          <PaginationItem>
-            <PaginationNext
-              className={page === totalPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              onClick={page === totalPage ? undefined : () => onChange?.(page + 1)}
-              size="default"
-            />
-          </PaginationItem>
-        </PaginationContent>
+        {simple ? renderSimplePagination() : renderFullPagination()}
         {/* 控制区域 */}
         {showSizeChanger || showQuickJumper ? (
           <div className="flex items-center space-x-3">
